@@ -214,33 +214,63 @@ No extra setup. Just point Moltbot at `~/claude-memory/` and it indexes everythi
 
 ### Claude Code: MCP Server for Semantic Search
 
-Claude Code needs an MCP server to get semantic search. Add to `~/.claude/settings.json`:
+Claude Code needs an MCP server to search the shared memory files. The best option is **MCP-Markdown-RAG** — an MCP server built specifically for semantic search over markdown files.
 
-**Option A: Search past Claude Code sessions**
+**Why MCP-Markdown-RAG:**
+- Built specifically for markdown files (not code, not general documents)
+- Local-only — no API costs, no data leaves your machine
+- Uses Milvus vector database with sentence-transformers for embeddings
+- Chunks by headings (perfect for your structured memory files)
+- Incremental indexing — only re-indexes changed files
+
+**Setup:**
+```bash
+# Clone and install
+git clone https://github.com/Zackriya-Solutions/MCP-Markdown-RAG.git
+cd MCP-Markdown-RAG
+pip install -r requirements.txt
+```
+
+Add to `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "conversation-search": {
-      "command": "npx",
-      "args": ["cc-conversation-search"]
+    "markdown-rag": {
+      "command": "python",
+      "args": ["/path/to/MCP-Markdown-RAG/server.py", "--docs-path", "~/claude-memory"]
     }
   }
 }
 ```
 
-**Option B: Search the shared memory repo (recommended for bridge)**
-```json
-{
-  "mcpServers": {
-    "vector-memory": {
-      "command": "npx",
-      "args": ["claude-code-vector-memory", "--memory-dir", "~/claude-memory"]
-    }
-  }
-}
-```
+Point it at `~/claude-memory/` — the same files Moltbot writes to. Both tools search the same memory.
 
-Option B indexes the same files Moltbot writes to — both tools search the same memory.
+**Other options considered and why they're not ideal:**
+
+```
+┌──────────────────────────────┬──────────────────────────────────────────────────────┐
+│ MCP Server                   │ Why Not                                              │
+├──────────────────────────────┼──────────────────────────────────────────────────────┤
+│ claude-code-vector-memory    │ Only indexes Claude Code session summaries, not       │
+│                              │ arbitrary markdown files                              │
+│                              │                                                      │
+│ cc-conversation-search       │ Same — only Claude Code's own past sessions           │
+│                              │                                                      │
+│ @modelcontextprotocol/       │ Knowledge graph (entities + relations), not vector    │
+│   server-memory              │ search — structured recall, not "find similar"        │
+│                              │                                                      │
+│ claude-mem                   │ Only indexes Claude Code sessions                     │
+│                              │                                                      │
+│ Claude-CursorMemoryMCP       │ Requires PostgreSQL + pgvector (too heavy)            │
+│                              │                                                      │
+│ Simple File Vector Store     │ Viable alternative — TypeScript/npx, lighter weight,  │
+│                              │ watches directories. Good fallback if MCP-Markdown-   │
+│                              │ RAG doesn't work out.                                 │
+│                              │                                                      │
+│ Local RAG MCP                │ Handles PDF/DOCX/TXT too — more than you need.        │
+│                              │ Uses LanceDB. Also viable.                            │
+└──────────────────────────────┴──────────────────────────────────────────────────────┘
+```
 
 ### Claude Chat: No Semantic Search
 
@@ -360,6 +390,65 @@ Constraints: [project rules — TDD, accessibility, BJJ color system]
 ```
 
 The entire bridge adds ~$3-5/month on top of your existing Max subscription.
+
+### Will the Bridge Get Expensive?
+
+No. The cost math works in your favor:
+
+- **Moltbot (Haiku 4.5 API)** does the cheap work — refining prompts, searching memory, logging results. Each call is ~$0.001-0.005. Even sending dozens of coding tasks per day stays under $5/month.
+- **Claude Code (Max subscription)** does the expensive work — reading codebases, editing files, running tests. But you're already paying for Max. The bridge adds $0 to your Claude Code costs.
+
+The bridge doesn't multiply costs. It adds a tiny Haiku call before each Claude Code execution. You'd need to send hundreds of messages per day for Haiku costs to become noticeable.
+
+---
+
+## Part 7: Remote Coding from Anywhere
+
+### The Setup
+
+With Moltbot running on your Mac Mini (always on) and connected to Slack/Telegram/WhatsApp, you can send coding tasks from anywhere — your phone, a laptop, a coffee shop.
+
+```
+Your phone (anywhere)
+  ↓ message via Slack/Telegram/WhatsApp
+Mac Mini (home)
+  ├── Moltbot receives message
+  ├── Refines prompt + searches memory
+  ├── Runs: claude -p "refined prompt"
+  ├── Claude Code edits files on Mac Mini
+  └── Moltbot messages you back: "Done. Here's what changed."
+```
+
+You're effectively coding remotely through text messages.
+
+### What You Can See
+
+```
+┌───────────────────────────────────────────┬──────────────┐
+│ What                                      │ Can You See?  │
+├───────────────────────────────────────────┼──────────────┤
+│ Moltbot's summary of what happened        │ Yes (message) │
+│                                           │               │
+│ Git diff of changes                       │ Yes (any Mac) │
+│                                           │               │
+│ Claude Code's real-time streaming output  │ No            │
+│                                           │               │
+│ Step-by-step file edits as they happen    │ No            │
+│                                           │               │
+│ The interactive IDE experience            │ No            │
+└───────────────────────────────────────────┴──────────────┘
+```
+
+It's like texting someone "build me X" and getting back "done, here's what I did." You trust the output and verify via git.
+
+### When You Want the Full IDE Experience
+
+Sit down at either Mac:
+- **Mac Mini**: Run `/resume` to see the full conversation transcript from the headless session
+- **Either Mac**: Open the project — file changes are already there via git
+- **MacBook Pro**: `git pull` to get the latest changes, then continue working in Claude Code IDE
+
+**Limitation:** `/resume` only works on the machine that ran the session (the Mac Mini). But the code changes themselves sync everywhere via git.
 
 ---
 
