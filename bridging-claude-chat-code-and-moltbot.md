@@ -552,13 +552,16 @@ Via Moltbot   → fully automatic, no action needed
 
 ## Part 9: Quick Start Guide
 
+**Note:** The project formerly known as Moltbot/Clawdbot is now called **OpenClaw**. The CLI command is `openclaw`. The npm package `moltbot` is a stub — build from source instead.
+
 ### Prerequisites
 
-- Node.js 22+ (`node --version`)
+- Node.js 22+ via Homebrew (`brew install node@22 && brew link node@22 --force --overwrite`)
+- pnpm (`npm install -g pnpm`)
 - Python 3.8+ (`python3 --version`)
 - Git (`git --version`)
 - Anthropic API key (from [console.anthropic.com](https://console.anthropic.com))
-- Mac Mini running 24/7 (for Moltbot daemon)
+- Mac Mini running 24/7 (for OpenClaw daemon)
 
 ### Step 1: Create the Shared Memory Repo
 
@@ -572,7 +575,13 @@ git init
 cat > CLAUDE.md << 'EOF'
 # Shared Memory Context
 This file is symlinked into projects so Claude Code can read shared memory.
-See ~/claude-memory/ for full context.
+
+## Memory Protocol
+Before ending a session, append a summary to ~/claude-memory/memory/YYYY-MM-DD.md:
+- What was done (files changed, features added, bugs fixed)
+- Decisions made and why
+- What's left to do
+Then: cd ~/claude-memory && git add -A && git commit -m "memory: <summary>" && git push
 EOF
 
 cat > context/decisions.md << 'EOF'
@@ -593,61 +602,72 @@ EOF
 git add -A && git commit -m "init: shared memory repo"
 ```
 
-Push to a private remote (GitHub, GitLab, etc.) for multi-machine sync:
+Push to a private remote for multi-machine sync:
 ```bash
 gh repo create claude-memory --private --source=. --push
 ```
 
-### Step 2: Install Moltbot
+### Step 2: Install OpenClaw (Build from Source)
+
+The `moltbot` npm package is a placeholder stub. Build from source:
 
 ```bash
-npm install -g moltbot@latest
-moltbot onboard --auth-choice anthropic-api-key
-# Select claude-haiku-4-5 as your model
+git clone https://github.com/moltbot/moltbot.git ~/moltbot-src
+cd ~/moltbot-src
+pnpm install
+pnpm build
+
+# Link globally so `openclaw` works from anywhere
+pnpm setup          # first time only — sets up global bin dir
+pnpm link --global
 ```
 
-### Step 3: Configure Moltbot as the Bridge
-
-Edit `~/clawd/SOUL.md`:
-```markdown
-# Role
-You bridge messaging to Claude Code. You are the persistent memory layer.
-
-# On receiving a task:
-1. Search memory for relevant context (use memory_search)
-2. Refine the user's rough request into a structured prompt
-3. Execute: claude -p "<prompt>" --output-format json --allowedTools "Bash,Read,Edit,Write"
-4. Log the result to memory (what changed, what was decided)
-5. Report back with a short summary
-
-# Prompt format for Claude Code:
-Task: [one-line summary]
-Context: [retrieved from memory search]
-Requirements: [specific acceptance criteria]
-Files: [known relevant files/paths]
-Constraints: [project rules — TDD, accessibility, etc.]
-
-# After execution:
-- Log result to ~/claude-memory/memory/YYYY-MM-DD.md
-- Auto-commit: git add -A && git commit -m "memory: <summary>" && git push
+Verify:
+```bash
+openclaw --version   # Should show 2026.x.x
 ```
 
-Set Haiku in `~/.clawdbot/config.json`:
-```json
-{
-  "model": "claude-haiku-4-5-20241022"
-}
-```
-
-### Step 4: Symlink Moltbot's Memory to the Shared Repo
+### Step 3: Run the Onboard Wizard
 
 ```bash
-# Back up existing clawd memory (if any)
-mv ~/clawd ~/clawd-backup 2>/dev/null
-
-# Symlink so Moltbot reads/writes the shared repo
-ln -s ~/claude-memory ~/clawd
+openclaw onboard --auth-choice apiKey --workspace ~/claude-memory
 ```
+
+The wizard walks through:
+
+```
+┌───┬──────────────────────────┬──────────────────────────────────────────────┐
+│ # │ Prompt                   │ Recommended Choice                           │
+├───┼──────────────────────────┼──────────────────────────────────────────────┤
+│ 1 │ Gateway setup            │ Local gateway (this machine)                 │
+│ 2 │ Gateway port             │ 18789 (default)                              │
+│ 3 │ Gateway bind             │ Loopback (127.0.0.1) — most secure           │
+│ 4 │ Gateway auth             │ Token (recommended)                          │
+│ 5 │ Tailscale exposure       │ Off                                          │
+│ 6 │ Gateway token            │ Blank (auto-generate)                        │
+│ 7 │ Configure channels       │ Yes → Telegram (Bot API)                     │
+│ 8 │ Telegram DM policy       │ Pairing (recommended) — first user = owner   │
+│ 9 │ Configure skills         │ No — start minimal per security guardrails   │
+│10 │ Enable hooks             │ session-memory only                          │
+│11 │ Install gateway service  │ Yes — runs 24/7 as LaunchAgent daemon        │
+│12 │ Service runtime          │ Node (recommended)                           │
+│13 │ Hatch bot                │ TUI — introduce yourself and set the role    │
+└───┴──────────────────────────┴──────────────────────────────────────────────┘
+```
+
+**Step 4 (symlink) is handled automatically** — the `--workspace ~/claude-memory` flag tells OpenClaw to use the shared memory repo directly. No symlink needed.
+
+### Step 4: Create the Telegram Bot
+
+Before running the onboard wizard's channel setup:
+
+1. Download Telegram (Mac, iOS, or web.telegram.org)
+2. Create an account with your phone number
+3. Search for `@BotFather` (verified, ~3.9M users)
+4. Send `/newbot`
+5. Give it a name (e.g., `Bridgette`) and username (must end in `bot`, e.g., `ntd_bot`)
+6. Copy the token → paste into the wizard
+7. Save the token in your password manager
 
 ### Step 5: Install MCP-Markdown-RAG for Claude Code
 
@@ -707,23 +727,16 @@ cp pre-compact-memory.sh .claude/hooks/
 chmod +x .claude/hooks/pre-compact-memory.sh
 ```
 
-### Step 7: Connect a Messaging Channel
-
-Telegram is the easiest:
-1. Open Telegram, message `@BotFather`
-2. `/newbot` → name it → copy the token
-3. Paste token when Moltbot prompts
-
-### Step 8: Test End-to-End
+### Step 7: Test End-to-End
 
 ```bash
 # 1. Verify Claude Code headless mode works
 claude -p "echo hello" --output-format json
 
-# 2. Verify Moltbot is running
-moltbot status --all
+# 2. Verify OpenClaw is running
+openclaw status --all
 
-# 3. Send a test message via Telegram/Slack
+# 3. Send a test message via Telegram to your bot
 #    "create a file called test.txt with hello world"
 
 # 4. Check memory was updated
@@ -731,13 +744,16 @@ cat ~/claude-memory/memory/$(date +%Y-%m-%d).md
 
 # 5. Check git sync
 cd ~/claude-memory && git log --oneline -3
+
+# 6. Run security audit
+openclaw security audit --deep
 ```
 
 ### On Your MacBook Pro (Second Machine)
 
 ```bash
 # Clone the shared memory repo
-git clone <your-remote-url> ~/claude-memory
+git clone git@github.com:AbeJitsu/claude-memory.git ~/claude-memory
 
 # Symlink CLAUDE.md into your projects
 ln -s ~/claude-memory/CLAUDE.md ~/Projects/your-project/CLAUDE.md
@@ -746,7 +762,7 @@ ln -s ~/claude-memory/CLAUDE.md ~/Projects/your-project/CLAUDE.md
 # Add the same hooks to .claude/settings.json (same as Step 6)
 ```
 
-Now both machines share memory via git. Moltbot writes on the Mac Mini, Claude Code reads on either Mac.
+Now both machines share memory via git. OpenClaw writes on the Mac Mini, Claude Code reads on either Mac.
 
 ---
 
