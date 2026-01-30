@@ -1,573 +1,432 @@
-# Moltbot vs Claude Code: A Full-Stack Developer's Deep Dive
+# Moltbot: What It Is, What It Costs, and Whether It's Worth It
 
-*Prepared for tomorrow morning's evaluation — January 30, 2026*
-
----
-
-## TL;DR — Key Takeaways
-
-1. **Moltbot is NOT an AI model.** It's an orchestration layer that uses Claude Opus 4.5, GPT-4, etc. via API. You bring your own keys or use your Claude subscription via OAuth.
-
-2. **Moltbot is NOT a Claude Code replacement.** They solve completely different problems:
-   - **Claude Code** → understands codebases, writes/refactors code, handles git
-   - **Moltbot** → 24/7 personal automation across WhatsApp, Telegram, email, calendar, etc.
-
-3. **Moltbot's killer feature is persistent memory.** It stores everything in plain Markdown files (`USER.md`, `MEMORY.md`, `memory/YYYY-MM-DD.md`) that persist across weeks/months. You can manually edit these files to shape its knowledge.
-
-4. **For business planning/iteration, Moltbot's value is:**
-   - Proactive check-ins ("How's the landing page conversion looking?")
-   - Cross-channel context ("Remember what we discussed on WhatsApp about the pricing page")
-   - Scheduled automation via heartbeat/cron ("Every Monday, summarize last week's commits")
-   - Long-term project memory that Claude Code sessions don't retain
-
-5. **Security concerns are real.** Credentials stored in plaintext, exposed admin ports, supply chain attack vectors. Run it in a VM with dedicated accounts, not on your main dev machine.
-
-6. **Best workflow:** Keep Claude Code for all coding work. Use Moltbot (sandboxed) for the glue—notifications, planning context, and life automation that persists between coding sessions.
-
-7. **The cost reality (updated after Reddit research):**
-   - Using Max subscription via OAuth likely violates Anthropic TOS — some users report bans
-   - Opus 4.5 API = $360-750/month for heavy use (unaffordable)
-   - **Sonnet 4.5 API = $100-150/month** (best balance — native compatibility, good quality)
-   - Gemini 2.5 Pro = $70-100/month (cheaper but janky — workarounds required)
-   - GPT-4o Mini = $25-40/month (too limited for real agentic use)
+*A practical guide for developers considering Moltbot — January 30, 2026*
 
 ---
 
-## Part 1: Understanding Moltbot (Formerly Clawdbot)
+## Why This Document Exists
 
-### What Happened With the Name
+You've heard the buzz about Moltbot (formerly Clawdbot). You're wondering if it could help you work smarter — whether that's planning your own projects or automating workflows for clients. This guide cuts through the hype and gives you the real picture: what Moltbot actually does, what it costs, where it shines, and where it falls short.
 
-On January 27, 2026, Anthropic sent a polite trademark request to creator Peter Steinberger. "Clawdbot" (and its mascot "Clawd") was too close to "Claude." The project rebranded to "Moltbot" (mascot: "Molty")—named after the process of lobsters shedding their shells.
-
-Same code. Same functionality. Same lobster. New name.
-
-### What Moltbot Actually Is
-
-**Moltbot is not its own AI.** It's an agent framework / orchestration layer that *uses* models like Claude Opus 4.5, GPT-4, or local models through their APIs.
-
-Configuration example:
-```json
-{
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "anthropic/claude-opus-4-5"
-      }
-    }
-  }
-}
-```
-
-You can use:
-- **Anthropic API key** — direct API access, pay per token
-- **Claude subscription OAuth** — use your Pro/Max tokens via `claude setup-token`
-- **OpenAI, local models, etc.** — whatever provider you configure
-
-Moltbot is a **local-first, single-user AI agent** that acts as a control plane connecting your messaging apps, devices, and automation tools. Unlike chatbots that just respond to prompts, Moltbot:
-
-- Runs as a background daemon 24/7
-- Maintains long-term memory across weeks of interaction
-- Executes shell commands, manages files, controls your browser
-- Works even when you're not at your computer (text it from your phone)
-- Can write new "skills" to extend its own capabilities
-
-Think of it as a personal assistant that happens to live on your machine rather than in a chat window.
-
-### The Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Your Machine                          │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │                    Moltbot Gateway                       ││
-│  │              (WebSocket control plane)                   ││
-│  │                  ws://127.0.0.1:18789                    ││
-│  └─────────────────────────────────────────────────────────┘│
-│         ▲              ▲              ▲              ▲       │
-│         │              │              │              │       │
-│    ┌────┴────┐   ┌────┴────┐   ┌────┴────┐   ┌────┴────┐   │
-│    │WhatsApp │   │Telegram │   │ Slack   │   │ Discord │   │
-│    └─────────┘   └─────────┘   └─────────┘   └─────────┘   │
-│                                                              │
-│    ┌─────────────────────────────────────────────────────┐  │
-│    │   Browser (CDP) │ Canvas │ Cron │ Skills │ Nodes   │  │
-│    └─────────────────────────────────────────────────────┘  │
-│                                                              │
-│    ┌─────────────────────────────────────────────────────┐  │
-│    │  LLM Provider: Claude Opus 4.5 / GPT-4 / Local      │  │
-│    │              (via API — you bring keys)              │  │
-│    └─────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Key components:
-- **Gateway**: The central hub running on your hardware
-- **Channels**: WhatsApp, Telegram, Slack, Discord, Signal, iMessage, Teams, Matrix, and more
-- **Tools**: Browser control via Chrome DevTools Protocol, cron jobs, webhooks, camera/screen, notifications
-- **Skills**: Modular plugins (bundled, managed from ClawdHub, or custom workspace skills)
-- **LLM Provider**: The actual AI brain (Claude, GPT, etc.) — Moltbot orchestrates, the model thinks
+By the end, you'll know exactly whether Moltbot makes sense for your situation.
 
 ---
 
-## Part 2: How Moltbot Memory Works
+## Quick Summary
 
-This is the feature that distinguishes Moltbot from regular chat sessions.
+**What Moltbot is:** An open-source agent framework that connects AI models (Claude, GPT, Gemini) to your messaging apps, browser, and local machine. It runs 24/7 and maintains persistent memory across weeks of conversations.
+
+**What Moltbot is NOT:** It's not an AI model itself. It's not a Claude Code replacement. It's not magic.
+
+**The honest trade-offs:**
+
+| The Good | The Real Talk |
+|----------|---------------|
+| Persistent memory across weeks | Security concerns are documented and real |
+| Multi-channel access (WhatsApp, Telegram, etc.) | Costs $100-750/month for serious use |
+| 24/7 autonomous operation | Optimized for Claude; other models are janky |
+| Great for repetitive, criteria-based workflows | TOS gray area if using subscription OAuth |
+
+**Bottom line:** Moltbot is genuinely useful for specific use cases — but it requires deliberate setup, a realistic budget, and attention to security. It's not a casual experiment.
+
+---
+
+## Part 1: Understanding What Moltbot Actually Is
+
+### The Name Change
+
+On January 27, 2026, Anthropic asked creator Peter Steinberger to rename "Clawdbot" (and mascot "Clawd") due to trademark similarity with Claude. He rebranded to "Moltbot" — named after lobsters molting their shells.
+
+Same tool. Same code. New name.
+
+### The Core Concept
+
+Think of Moltbot as a control plane that sits between you and an AI model. You bring your own AI (Claude, GPT, Gemini, or local models via API), and Moltbot adds:
+
+- **24/7 operation** — Runs as a background daemon on your machine
+- **Multi-channel messaging** — Talk to it via WhatsApp, Telegram, Slack, Discord, iMessage, etc.
+- **Persistent memory** — Remembers conversations from weeks ago
+- **Tool access** — Can control your browser, run commands, manage files
+- **Scheduled automation** — Proactive check-ins, cron jobs, webhooks
+
+### How It's Different from a Chatbot
+
+| Regular Chatbot | Moltbot |
+|-----------------|---------|
+| Responds when you ask | Can message you proactively |
+| Forgets between sessions | Remembers for weeks/months |
+| Lives in a browser tab | Runs on your machine 24/7 |
+| One interface | Any messaging app you want |
+| Suggests actions | Can actually execute them |
+
+### The Architecture (Simple Version)
+
+```
+Your Machine
+├── Moltbot Gateway (always running)
+│   ├── Connected to: WhatsApp, Telegram, Slack, etc.
+│   ├── Tools: Browser control, file system, cron
+│   └── Memory: Markdown files on disk
+│
+└── AI Provider (you choose)
+    ├── Anthropic (Claude) ← best compatibility
+    ├── OpenAI (GPT)
+    ├── Google (Gemini)
+    └── Local models (Ollama, LM Studio)
+```
+
+---
+
+## Part 2: How the Memory System Works
+
+This is Moltbot's most distinctive feature, so it's worth understanding clearly.
 
 ### Memory = Plain Markdown Files
 
-Moltbot memory is **plain Markdown stored on disk**. The files are the source of truth; the model only "remembers" what gets written to these files.
+There's no magic database. Moltbot stores everything in human-readable Markdown files:
 
 ```
-~/clawd/                          # Your workspace root
-├── SOUL.md                       # Persona, tone, boundaries
-├── AGENTS.md                     # Operating instructions, rules
-├── USER.md                       # Facts about YOU
-├── IDENTITY.md                   # Agent's name, vibe, emoji
-├── TOOLS.md                      # Notes about local tools
-├── HEARTBEAT.md                  # Checklist for scheduled runs
-├── MEMORY.md                     # Curated long-term memory
-├── memory/                       # Daily logs
-│   ├── 2026-01-29.md
-│   ├── 2026-01-28.md
-│   └── ...
-└── canvas/                       # Working directory
+~/clawd/
+├── SOUL.md          → Agent's personality and boundaries
+├── AGENTS.md        → Operating instructions and rules
+├── USER.md          → Facts about you
+├── MEMORY.md        → Long-term decisions and context
+├── HEARTBEAT.md     → Scheduled check-in prompts
+└── memory/
+    ├── 2026-01-29.md  → Today's conversation log
+    └── 2026-01-28.md  → Yesterday's log
 ```
 
-### What Each File Does
+### What Gets Loaded When
 
-| File | Purpose | Loaded When |
-|------|---------|-------------|
-| `SOUL.md` | Defines how the agent communicates—personality, tone, boundaries | Every session |
-| `AGENTS.md` | Operating instructions, priorities, "how to behave" | Every session |
-| `USER.md` | What it knows about you (preferences, facts, context) | Every session |
-| `MEMORY.md` | Curated long-term memory (decisions, durable facts) | Main session only |
-| `memory/YYYY-MM-DD.md` | Daily append-only logs | Today + yesterday |
-| `HEARTBEAT.md` | Short checklist for scheduled/proactive runs | Heartbeat runs |
+Every session, Moltbot reads these files to "remember" context:
 
-### Memory Loading Process
+1. `SOUL.md` — Who the agent is
+2. `USER.md` — Who you are
+3. `memory/` files — Recent daily logs (today + yesterday)
+4. `MEMORY.md` — Long-term memory (in direct chats only)
 
-Every session, Moltbot follows this sequence:
-1. Read `SOUL.md` — this is who it is
-2. Read `USER.md` — this is who it's helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. If in MAIN SESSION (direct chat): Also read `MEMORY.md`
+### Why This Matters
 
-### Two Memory Layers
+You can manually edit these files. Want the agent to know something? Add it to `USER.md`. Made a business decision? Log it in `MEMORY.md`. The agent will "remember" it next session.
 
-**Daily logs (append-only):**
-- Day-to-day notes and running context
-- Written to `memory/YYYY-MM-DD.md`
-- Only today + yesterday loaded by default
-
-**Curated long-term memory:**
-- Decisions, preferences, durable facts
-- Written to `MEMORY.md`
-- Only loaded in private/main sessions (never in group contexts)
-
-### How Memory Gets Written
-
-When you tell Moltbot "remember this," it writes to the appropriate file. The key rule:
-> "If someone says 'remember this,' write it down — do not keep it in RAM."
-
-Example after telling it your preferences:
-```markdown
-# USER.md - About Your Human
-
-## Context
-
-### Business
-- Runs a SaaS product focused on [X]
-- Current priority: improving landing page conversion
-- Prefers to iterate in small, measurable sprints
-
-### Preferences
-- Communication style: direct, no fluff
-- Likes Breaking Bad
-```
-
-### Memory Search (Semantic + Keyword)
-
-Moltbot can build a small vector index over `MEMORY.md` and `memory/*.md` so you can query even when wording differs:
-- **BM25 keyword search**: Great for exact tokens (IDs, env vars, code symbols)
-- **Vector search**: Great for semantic matching ("Mac Studio gateway host" finds "the machine running the gateway")
-
-Index stored in SQLite at `~/.clawdbot/memory/<agentId>.sqlite`
-
-### Auto-Compaction
-
-When a session is close to context limit, Moltbot triggers a silent turn that reminds the model to write durable memory before compacting. This happens automatically so important context survives.
-
-### You Can Manually Edit Memory
-
-Since it's all Markdown, you can:
-- Open `USER.md` and add business context
-- Curate `MEMORY.md` to keep only what matters
-- Delete outdated entries from daily logs
-- Version control with git: `git init && git add *.md memory/ && git commit -m "Backup"`
+You can also version control them with git — which means your agent's memory is backed up and recoverable.
 
 ---
 
-## Part 3: Using Moltbot for Business Planning & Site Iteration
+## Part 3: The Cost Reality
 
-### Why Moltbot Could Help Your Workflow
+Let's be direct about money. A Reddit post from this week put it plainly: *"Moltbot is an unaffordable novelty"* for many users. Here's the actual math.
 
-The people who get real value from Moltbot come with a **clear, predefined use case** and configure it deliberately. For business/site iteration, the value proposition:
+### Why It Gets Expensive
 
-| Capability | How It Helps Your Business |
-|------------|---------------------------|
-| **Persistent memory** | "Remember we decided to A/B test the hero copy" persists across weeks |
-| **Multi-channel access** | Quick updates via WhatsApp while away from computer |
-| **Proactive heartbeat** | Morning summaries, weekly planning prompts, metric alerts |
-| **Cross-session context** | Continues discussions from last week without re-explaining |
-| **Scheduled automation** | "Every Friday, summarize what we shipped and what's next" |
+Moltbot is "agentic" — it makes multiple API calls per interaction, re-sends context each time, and runs tool operations. Token usage adds up fast.
 
-### Example Workflow: Site Iteration
+### Model Options and Monthly Costs
 
-**Initial setup** — Populate your workspace files:
+| Model | API Pricing (per 1M tokens) | Monthly Cost (Heavy Use) | Moltbot Compatibility |
+|-------|----------------------------|-------------------------|----------------------|
+| **Claude Opus 4.5** | $5 in / $25 out | $360-750 | Native (best) |
+| **Claude Sonnet 4.5** | $3 in / $15 out | $100-150 | Native (great) |
+| **Gemini 2.5 Pro** | $1.25 in / $10 out | $70-100 | Requires workarounds |
+| **GPT-4o Mini** | $0.15 in / $0.60 out | $25-40 | Limited capability |
 
-```markdown
-# USER.md
+### The Subscription Workaround (and Why It's Risky)
 
-## Business Context
-- Building [YourProduct] — a SaaS tool for [X]
-- Current site: [url]
-- Tech stack: Next.js, Vercel, Stripe
+Moltbot supports OAuth login with Claude Max or ChatGPT Plus subscriptions — letting you use subscription tokens instead of paying per-API-call.
 
-## Current Focus
-- Improving landing page conversion (currently 2.3%)
-- Testing new pricing tier
-- Preparing for ProductHunt launch
+**The problem:** This likely violates both Anthropic's and OpenAI's Terms of Service. The TOS prohibits accessing services "through a bot, script, or otherwise" when not using the API. Some users have reported account bans.
 
-## Iteration Style
-- Small changes, measure before next change
-- Prefer 1-2 week sprints
-- Document decisions and rationale
+**If you don't care about the risk:** ChatGPT Plus ($20/month) with `openai-codex` OAuth is the cheapest way to experiment with a capable model. Setup:
+
+```bash
+moltbot onboard --auth-choice openai-codex
 ```
 
+This gives you access to GPT-5.2 Codex, which is legitimately good for agentic work.
+
+### Recommended Starting Point
+
+**For personal experimentation:** Sonnet 4.5 API at $100-150/month. Native compatibility, no TOS risk, good enough for most workflows.
+
+**For business with budget:** Opus 4.5 API at $500-750/month. Best quality, highest reliability.
+
+**For low-stakes testing:** ChatGPT Plus ($20/month) via OAuth. Understand you might get banned.
+
+---
+
+## Part 4: Where Moltbot Actually Shines
+
+Moltbot isn't for everything. Here's where it genuinely adds value.
+
+### Great Use Case: Repetitive, Criteria-Based Workflows
+
+**Example: Influencer outreach automation**
+
+A 5-step process a human does manually:
+1. **Find** — Search for influencers matching criteria
+2. **Qualify** — Check follower count, engagement, niche fit
+3. **Research** — Review recent content, brand deals, audience
+4. **Personalize** — Write custom outreach email
+5. **Send** — Queue for approval or send
+
+This is perfect for Moltbot because:
+- It's repetitive (same steps, hundreds of times)
+- It's criteria-based (clear rules for qualification)
+- It's research-heavy (Moltbot can browse and summarize)
+- It's writing-intensive (LLMs excel at personalized copy)
+- Volume is the bottleneck, not judgment
+
+**ROI math:** If a human does 20 outreach/day and Moltbot does 150, you get 7.5x volume. At $1000/month API cost with 5% conversion and $500/deal, that's potentially $50K+/month return.
+
+### Great Use Case: Persistent Planning Context
+
+**Example: SaaS product planning for needthisdone.com**
+
+When you're early-stage and wearing all hats, context is scattered. Moltbot becomes the external brain that remembers:
+- What you decided and why
+- What experiments are running
+- What users said in interviews
+- What's blocked and what's next
+
+Sample `HEARTBEAT.md` for weekly planning:
 ```markdown
-# MEMORY.md
-
-## Decisions Log
-
-### 2026-01-20: Pricing Change
-- Moved from $29/$99 to $19/$49/$149
-- Rationale: Lower barrier, higher expansion revenue
-- Measure: Track conversion + ARPU over 30 days
-
-### 2026-01-15: Hero Copy Test
-- Testing "Ship faster" vs "Build better"
-- Current winner: "Ship faster" (+12% click-through)
-```
-
-**Daily use:**
-
-Via WhatsApp: *"What did we decide about the pricing page layout?"*
-→ Moltbot recalls from MEMORY.md
-
-Via Telegram: *"Remember: we're pausing the header experiment until next month"*
-→ Moltbot writes to daily log + MEMORY.md
-
-**Proactive heartbeat** (configured in `HEARTBEAT.md`):
-```markdown
-# Heartbeat Checklist
-
 ## Monday 9am
-- Summarize last week's site changes
-- List open experiments and their status
-- Remind me of this week's priorities
+- What are this week's top 3 priorities?
+- Any decisions from last week that need follow-up?
 
 ## Friday 5pm
-- What shipped this week?
-- What decisions were made?
+- What did we ship this week?
+- What did we learn?
 - What's blocked?
 ```
 
-### What Moltbot Does Well for Planning
+### Not a Great Use Case: Deep Coding Work
 
-- **Continuity**: Remembers discussions from weeks ago
-- **Accessibility**: Text from anywhere, get context back
-- **Proactive**: Can initiate check-ins without you prompting
-- **Aggregation**: Can monitor folders, webhooks, etc. and notify you
+For actual development, Claude Code is better:
+- Deep codebase understanding via agentic search
+- Native git integration (commits, branches, PRs)
+- IDE extensions (VS Code, JetBrains)
+- Included with your Claude Max subscription (no extra cost)
 
-### What Moltbot Doesn't Do Well for Dev Work
-
-- **Codebase understanding**: Doesn't have agentic search or deep code context
-- **Direct editing**: Can run commands but doesn't "understand" your code
-- **Git workflows**: Basic compared to Claude Code's native integration
-- **IDE integration**: None
-
-**Bottom line:** Use Moltbot for the *planning and context layer* around your work. Use Claude Code for the *actual coding work*.
+**The right mental model:** Claude Code for coding. Moltbot for the planning, memory, and automation layer around your coding.
 
 ---
 
-## Part 4: Claude Code (You Know This, Brief Recap)
+## Part 5: Moltbot vs Claude Code
 
-Since you're already a daily Claude Code user, quick summary:
+Since you're already a Claude Code user, here's the direct comparison.
 
-- **Codebase understanding**: Maps entire repos in seconds via agentic search
-- **Direct execution**: Edits files, runs commands, creates commits, executes tests
-- **Session-based**: No persistent memory between sessions (use CLAUDE.md for repo context)
-- **Included with Max**: No additional API costs
-- **Security**: Enterprise-grade, from Anthropic directly
+| Aspect | Moltbot | Claude Code |
+|--------|---------|-------------|
+| **Primary purpose** | Life automation, persistent memory | Code development |
+| **AI model** | Bring your own (Claude, GPT, etc.) | Claude (built-in) |
+| **Runs as** | 24/7 background daemon | On-demand CLI |
+| **Messaging** | WhatsApp, Telegram, Slack, etc. | Terminal only |
+| **Memory** | Weeks/months (Markdown files) | Session-based (resets) |
+| **Codebase understanding** | Basic | Deep (agentic search) |
+| **Git integration** | Minimal | Native |
+| **Cost** | $100-750/month (API) | Included with subscription |
+| **Security** | Early-stage, concerns documented | Enterprise-grade |
 
-**The gap Moltbot fills:** Claude Code sessions don't remember your business context, planning decisions, or cross-project priorities. Moltbot can be that "meta layer" that remembers across sessions.
+### When to Use Which
 
----
-
-## Part 5: The Comparison Matrix
-
-### Feature-by-Feature
-
-| Feature | Moltbot | Claude Code |
-|---------|---------|-------------|
-| **What it is** | Agent orchestration framework | Coding assistant |
-| **AI model** | BYOK (Claude, GPT, etc.) | Claude (built-in) |
-| **Primary domain** | Life automation + planning | Code development |
-| **Runs as** | 24/7 daemon | On-demand CLI |
-| **Messaging integration** | WhatsApp, Telegram, Slack, Discord, Signal, Teams, iMessage | None |
-| **Codebase understanding** | Limited | Deep (agentic search) |
-| **Git integration** | Basic | Native (commits, branches, PRs) |
-| **IDE integration** | None | VS Code, JetBrains, GitHub, GitLab |
-| **Long-term memory** | Yes (weeks/months in Markdown) | Session-based only |
-| **Proactive automation** | Yes (heartbeat, cron, webhooks) | No |
-| **Cost model** | Free + BYOK (API costs) | Included with subscription |
-| **Security maturity** | Early-stage, concerns documented | Enterprise-grade |
-
-### Use Case Decision Tree
-
-| Your Need | Use This |
-|-----------|----------|
-| Write/refactor code | Claude Code |
+| Task | Use This |
+|------|----------|
+| Write or refactor code | Claude Code |
 | Understand a codebase | Claude Code |
 | Create commits and PRs | Claude Code |
 | Remember planning decisions across weeks | Moltbot |
-| Get morning summaries of project status | Moltbot |
-| Quick updates via phone while away | Moltbot |
-| Automated notifications when things happen | Moltbot |
-| Deep debugging and log analysis | Claude Code |
+| Proactive morning summaries | Moltbot |
+| Quick updates via phone | Moltbot |
+| Automated notifications | Moltbot |
+| Deep debugging | Claude Code |
 
 ---
 
-## Part 6: Lower-Cost Model Options for Moltbot
+## Part 6: Security — What You Need to Know
 
-The Reddit post highlights a real problem: Opus 4.5 API costs $360-750/month for heavy use. Here are your top 3 alternatives as of January 29, 2026.
+The security concerns are real and documented. This isn't FUD — security researchers have published findings.
 
-### Option 1: Claude Sonnet 4.5 (Best Balance)
+### The Main Issues
 
-**Pricing:** $3 input / $15 output per million tokens
+1. **Plaintext credential storage** — API keys and secrets stored in readable Markdown/JSON files
+2. **Exposed admin ports** — Researchers found hundreds of instances with unauthenticated ports open to the internet
+3. **Supply chain attacks** — A proof-of-concept malicious skill achieved remote code execution via the ClawdHub registry
+4. **No default sandboxing** — Moltbot has the same permissions as your user account
+5. **Prompt injection** — Processing emails or web content can inject malicious instructions
 
-| Usage Level | Estimated Monthly Cost |
-|-------------|------------------------|
-| Light | $20-30 |
-| Moderate | $60-80 |
-| Heavy | $120-150 |
+### How to Mitigate
 
-**Why it works:**
-- ~5x cheaper than Opus 4.5
-- Still scores 77.2% on SWE-bench (vs Opus at ~80%)
-- Strong agentic tool use: 70-98% across domains
-- Native Anthropic model = full Moltbot compatibility (pruning, compaction, XML tags)
-
-**Trade-offs:**
-- Less "creative" problem-solving than Opus
-- May struggle with very complex multi-step reasoning
-- Still not cheap for 24/7 use
-
-**Verdict:** Your best option. Anthropic-native means no compatibility issues.
+- **Run in a VM or container** — Not on your primary machine
+- **Use dedicated accounts** — Separate email, calendar, etc. for Moltbot
+- **Firewall admin ports** — Don't expose to the internet
+- **Vet skills carefully** — Don't install unverified plugins
+- **Treat it as experimental** — Not production infrastructure
 
 ---
 
-### Option 2: Gemini 2.5 Pro (Cheapest Viable)
+## Part 7: Getting Started Tomorrow
 
-**Pricing:** $1.25 input / $10 output per million tokens (≤200K context)
+If you want to try Moltbot, here's a practical path.
 
-| Usage Level | Estimated Monthly Cost |
-|-------------|------------------------|
-| Light | $12-20 |
-| Moderate | $35-50 |
-| Heavy | $70-100 |
+### Option A: Low-Stakes Experiment ($20/month)
 
-**Why it's tempting:**
-- ~2.5x cheaper than Sonnet 4.5
-- 1M token context window
-- Good at long-context tasks
+Use ChatGPT Plus subscription via OAuth. Understand you might get banned.
 
-**Critical limitations in Moltbot:**
-- **Pruning not implemented** — tool outputs bloat your context
-- **Token estimation uses Anthropic's algorithm** — may be inaccurate
-- **XML tag structuring is Anthropic-native** — Gemini uses JSON
-- **Batch processing fails** — no job ID system like Anthropic
+```bash
+# Install
+npm install -g moltbot@latest
 
-**Required workarounds:**
-```json
-{
-  "env": {
-    "PI_BASH_MAX_OUTPUT_CHARS": "50000"
-  },
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "google/gemini-2.5-pro",
-        "contextWindow": 200000
-      },
-      "web": {
-        "fetch": { "maxChars": 30000 }
-      },
-      "browser": {
-        "snapshotDefaults": { "mode": "efficient" }
-      }
-    }
-  }
-}
+# Set up with ChatGPT OAuth
+moltbot onboard --auth-choice openai-codex
+
+# Test it
+moltbot chat
 ```
 
-**Verdict:** Usable but janky. Moltbot is optimized for Anthropic; Gemini is a second-class citizen.
+### Option B: Proper Setup with Sonnet 4.5 ($100-150/month)
 
----
+Use Anthropic API directly. No TOS risk, full compatibility.
 
-### Option 3: GPT-4o Mini (Cheapest, But Limited)
+```bash
+# Install
+npm install -g moltbot@latest
 
-**Pricing:** $0.15 input / $0.60 output per million tokens
+# Set up with Anthropic API key
+moltbot onboard --auth-choice anthropic-api-key
 
-| Usage Level | Estimated Monthly Cost |
-|-------------|------------------------|
-| Light | $3-5 |
-| Moderate | $10-15 |
-| Heavy | $25-40 |
+# Or use Claude subscription token
+claude setup-token
+moltbot onboard  # Paste token when prompted
+```
 
-**Why it's attractive:**
-- 20x cheaper than Sonnet 4.5
-- Good for simple tasks
-- 128K context window
+### After Installation
 
-**Why it probably won't work well:**
-- Significantly less capable for agentic workflows
-- Struggles with complex tool use
-- The Reddit poster specifically said "other models suck"
-- Limited reasoning depth for multi-step tasks
-
-**Verdict:** Only viable for very simple use cases. Don't expect it to work like the demos.
-
----
-
-### Comparison Table
-
-| Model | Input/Output per 1M | Monthly (Heavy Use) | Moltbot Compatibility | Agentic Quality |
-|-------|---------------------|---------------------|----------------------|-----------------|
-| Claude Opus 4.5 | $5 / $25 | $360-450 | ★★★★★ Native | ★★★★★ Best |
-| Claude Sonnet 4.5 | $3 / $15 | $120-150 | ★★★★★ Native | ★★★★☆ Very Good |
-| Gemini 2.5 Pro | $1.25 / $10 | $70-100 | ★★★☆☆ Workarounds needed | ★★★☆☆ Good |
-| GPT-4o Mini | $0.15 / $0.60 | $25-40 | ★★☆☆☆ Limited support | ★★☆☆☆ Basic |
-
-### Recommendation
-
-**Start with Sonnet 4.5.** It's the sweet spot:
-- Native Moltbot compatibility (no hacks)
-- Good enough for most agentic workflows
-- ~$100-150/month is expensive but not insane
-
-If that's still too much, try Gemini 2.5 Pro with the workarounds above — but expect friction.
-
-### Cost Optimization Tips
-
-1. **Use prompt caching** — Anthropic offers up to 90% savings on repeated prompts
-2. **Batch API for non-urgent tasks** — 50% discount on all models
-3. **Cap your context window** — Gemini jumps to $2.50 input over 200K tokens
-4. **Route simple tasks to cheaper models** — Use Sonnet for complex, Haiku for quick answers
-5. **Aggressive compaction settings** — Reduce context re-sends
-
----
-
-## Part 8: Security Reality Check
-
-### Moltbot Security Concerns
-
-1. **Plaintext credential storage** — Secrets in Markdown/JSON files. Infostealer malware = game over.
-
-2. **Exposed admin ports** — Researchers found hundreds of instances with unauthenticated ports exposed.
-
-3. **Supply chain attacks** — Malicious skill uploaded to ClawdHub, achieved RCE on downstream users.
-
-4. **No default sandboxing** — Same permissions as you by default.
-
-5. **Prompt injection** — Processing emails/web content can inject malicious instructions.
-
-6. **Persistent memory as attack vector** — Attacks become stateful and delayed-execution.
-
-### If You Use Moltbot
-
-- Run in a VM or container (not your main machine)
-- Use dedicated automation accounts (not your main email/calendar)
-- Firewall admin ports
-- Enable encryption-at-rest for stored secrets
-- Vet skills before installing
-- Treat as secondary/experimental tool
-
----
-
-## Part 9: Tomorrow Morning Action Plan
-
-### To Try Moltbot for Business Planning
-
-1. **Set up a VM/sandbox first** (UTM, VirtualBox, or Docker)
-
-2. **Install:**
-   ```bash
-   npm install -g moltbot@latest
-   moltbot onboard --install-daemon
-   ```
-
-3. **Configure with your Claude subscription:**
-   ```bash
-   claude setup-token  # Generate token
-   moltbot onboard     # Paste when prompted
-   ```
-
-4. **Populate your workspace files:**
-   - Edit `~/clawd/USER.md` with your business context
-   - Edit `~/clawd/MEMORY.md` with key decisions
+1. **Populate your workspace files:**
+   - Edit `~/clawd/USER.md` with context about yourself and your projects
+   - Add key decisions to `~/clawd/MEMORY.md`
    - Set up `HEARTBEAT.md` for proactive check-ins
 
-5. **Connect one channel** (Telegram is easiest — just a bot token)
+2. **Connect a messaging channel:**
+   - Telegram is easiest (just create a bot token)
+   - WhatsApp requires more setup
 
-6. **Test the memory:**
+3. **Test the memory:**
    - Tell it something about your project
    - Close the session
    - Start a new session and ask about it
    - Verify it remembered
 
-### Keep Claude Code for All Coding
+---
 
-- Continue using Claude Code for actual development
-- Consider adding a `CLAUDE.md` in your repos if you haven't
-- Think of Moltbot as the "meta layer" for context that persists between Claude Code sessions
+## Part 8: Real-World Use Case — Influencer Outreach Agent
+
+Here's a concrete example of configuring Moltbot for the influencer outreach workflow.
+
+### Sample AGENTS.md
+
+```markdown
+# Influencer Outreach Agent
+
+## Your Role
+Find, qualify, and reach out to influencers for [Company/Product].
+
+## Qualification Criteria
+- Followers: 10,000 - 100,000
+- Engagement rate: 3%+
+- Niche: [fitness / beauty / tech / etc.]
+- Recent post frequency: at least 2x/week
+- No competing brand deals in last 30 days
+- Has email in bio OR findable via hunter.io
+
+## Research Requirements
+Before drafting outreach, gather:
+- 3 recent posts (topics, tone, engagement)
+- Bio summary
+- Any brand collaborations visible
+- Audience vibe (comments sentiment)
+
+## Email Template Style
+- Subject: Personal, not salesy
+- Opening: Reference specific recent content
+- Value prop: [what you're offering]
+- CTA: Simple reply ask
+- Length: Under 150 words
+
+## Workflow
+1. When given a search query or list, find candidates
+2. Qualify against criteria above
+3. Research each qualified candidate
+4. Draft personalized email
+5. Queue for human approval (never auto-send without explicit approval)
+
+## Reporting
+Log all outreach to memory/outreach-log.md:
+- Date, influencer handle, email, status
+- Response tracking when replies come in
+```
+
+### Cost Projection
+
+| Daily Volume | Monthly Cost (Opus 4.5) | Viable at $1000 Budget? |
+|--------------|-------------------------|------------------------|
+| 50 influencers | $125-175 | Yes |
+| 100 influencers | $250-350 | Yes |
+| 150 influencers | $400-500 | Yes |
+| 200 influencers | $500-700 | Yes |
+
+At $1000/month, you can process 150-200 influencers daily — far more than a human.
 
 ---
 
-## Sources & Further Reading
+## Part 9: The Bottom Line
+
+### Moltbot Is Worth Considering If:
+
+- You have a clear, repetitive workflow to automate
+- You're willing to spend $100-750/month on API costs
+- You'll run it in a sandboxed environment
+- You want persistent memory across sessions that Claude Code doesn't provide
+
+### Moltbot Probably Isn't For You If:
+
+- You want a cheap experiment (it's not cheap for real use)
+- Your main need is coding assistance (use Claude Code instead)
+- You're not comfortable with the security trade-offs
+- You expect it to work great with non-Claude models (it doesn't)
+
+### My Recommendation
+
+**For your personal project (needthisdone.com):** Start with Claude Code for all development work. If you find yourself wanting persistent planning memory across sessions, try Moltbot with Sonnet 4.5 API ($100-150/month) in a sandbox.
+
+**For the client with deep pockets:** If they have $1000/month budget and a clear workflow (like influencer outreach), Moltbot with Opus 4.5 can genuinely deliver 10x ROI on repetitive, criteria-based work. The key is defining the workflow precisely in AGENTS.md.
+
+**For tomorrow morning:** If you just want to kick the tires, use ChatGPT Plus ($20) via OAuth and accept the ban risk. You'll learn quickly whether the tool fits your thinking style.
+
+---
+
+## Sources
 
 ### Moltbot
 - [GitHub Repository](https://github.com/moltbot/moltbot)
 - [Official Documentation](https://docs.molt.bot)
+- [Model Providers Docs](https://docs.molt.bot/concepts/model-providers)
 - [Memory Documentation](https://docs.molt.bot/concepts/memory)
-- [Agent Workspace Docs](https://docs.molt.bot/concepts/agent-workspace)
-- [Anthropic Provider Setup](https://docs.molt.bot/providers/anthropic)
 - [TechCrunch Coverage](https://techcrunch.com/2026/01/27/everything-you-need-to-know-about-viral-personal-ai-assistant-clawdbot-now-moltbot/)
 - [Security Analysis (AIMultiple)](https://research.aimultiple.com/moltbot/)
-- [Security Guide (Auth0)](https://auth0.com/blog/five-step-guide-securing-moltbot-ai-agent/)
 - [1Password Security Analysis](https://1password.com/blog/its-moltbot)
+- [Reddit Discussion on Costs](https://reddit.com/r/ClaudeAI)
 
 ### Claude Code
-- [GitHub Repository](https://github.com/anthropics/claude-code)
 - [Official Documentation](https://code.claude.com/docs/en/overview)
-- [Product Page](https://claude.com/product/claude-code)
-- [Best Practices (Anthropic Engineering)](https://www.anthropic.com/engineering/claude-code-best-practices)
+- [Best Practices (Anthropic)](https://www.anthropic.com/engineering/claude-code-best-practices)
 
-### Comparisons
-- [Cursor vs Claude Code 2026 (WaveSpeedAI)](https://wavespeed.ai/blog/posts/cursor-vs-claude-code-comparison-2026/)
-- [AI Coding Assistants Comparison (Medium)](https://medium.com/@saad.minhas.codes/ai-coding-assistants-in-2026-github-copilot-vs-cursor-vs-claude-which-one-actually-saves-you-4283c117bf6b)
-- [Best AI Coding Agents 2026 (Faros)](https://www.faros.ai/blog/best-ai-coding-agents-2026)
+### Pricing
+- [Anthropic API Pricing](https://platform.claude.com/docs/en/about-claude/pricing)
+- [OpenAI API Pricing](https://openai.com/api/pricing/)
+- [Gemini API Pricing](https://ai.google.dev/gemini-api/docs/pricing)
 
 ---
 
-*Document generated January 29, 2026*
+*Last updated: January 30, 2026*
