@@ -59,19 +59,26 @@ Think of Moltbot as a control plane that sits between you and an AI model. You b
 └─────────────────────────┴──────────────────────────────────────────────────────────────────┘
 ```
 
-### How It's Different from a Chatbot
+### How It Compares to Claude Chat and Claude Code
+
+All three use the same underlying AI. The difference is the wrapper — what sits around the model.
 
 ```
-┌────────────────────────────┬────────────────────────────────┐
-│ Regular Chatbot            │ Moltbot                        │
-├────────────────────────────┼────────────────────────────────┤
-│ Responds when you ask      │ Can message you proactively    │
-│ Forgets between sessions   │ Remembers for weeks/months     │
-│ Lives in a browser tab     │ Runs on your machine 24/7      │
-│ One interface              │ Any messaging app you want     │
-│ Suggests actions           │ Can actually execute them      │
-└────────────────────────────┴────────────────────────────────┘
+┌─────────────────────────┬───────────────────────────┬───────────────────────────────┬───────────────────────────────┐
+│ Capability              │ Claude Chat (claude.ai)   │ Claude Code (CLI)             │ Moltbot                       │
+├─────────────────────────┼───────────────────────────┼───────────────────────────────┼───────────────────────────────┤
+│ Agentic (takes actions) │ No — suggests only        │ Yes — runs commands, edits    │ Yes — runs commands, browses  │
+│ Memory across sessions  │ Projects (limited)        │ Session-based (resets)        │ Weeks/months (Markdown files) │
+│ Runs as                 │ Browser tab               │ On-demand CLI                 │ 24/7 background daemon        │
+│ Interface               │ Web browser               │ Terminal / IDE                │ Any messaging app             │
+│ Proactive messages      │ No                        │ No                            │ Yes (scheduled check-ins)     │
+│ Codebase understanding  │ Upload files only         │ Deep (agentic search, git)    │ Basic                         │
+│ Best for                │ One-off questions          │ Development work              │ Automation + persistent memory│
+│ Cost                    │ $20/month subscription    │ Included with subscription    │ $100-750/month (API)          │
+└─────────────────────────┴───────────────────────────┴───────────────────────────────┴───────────────────────────────┘
 ```
+
+The key distinction: Claude Code is already agentic for development — it reads your codebase, runs tests, creates commits. Moltbot's advantage isn't "it can do things" (Claude Code can too), it's **persistent memory** and **always-on multi-channel access**.
 
 ### The Architecture (Simple Version)
 
