@@ -235,6 +235,56 @@ Sample `HEARTBEAT.md` for weekly planning:
 - What's blocked?
 ```
 
+### Great Use Case: Daily Content Curation + Drafting
+
+**Example: Automated morning content workflow**
+
+A daily process that takes 30-60 minutes manually:
+1. **Aggregate** — Scan Hacker News, GitHub Trending, Product Hunt, dev blogs for relevant stories
+2. **Filter** — Apply topic criteria (web dev, AI/ML, programming) and engagement signals
+3. **Curate** — Pick the top 3 options with hook angles and engagement potential
+4. **Deliver** — Send options to your phone at 6 AM via WhatsApp/Telegram
+5. **Draft** — When you reply with a number, draft a LinkedIn post in your voice
+6. **Generate** — Create an image via browser automation (e.g., Gemini)
+7. **Stage** — Save everything to a review folder
+
+This is a strong Moltbot use case because:
+- It's **time-triggered** (cron job at 6 AM — Moltbot runs 24/7)
+- It's **multi-channel** (delivers to your phone, you reply from bed)
+- It benefits from **persistent memory** (learns your voice, remembers what topics performed well)
+- It combines **browsing + writing + file management** — all tools Moltbot has access to
+
+Sample cron config:
+```json
+{
+  "cron": {
+    "jobs": [
+      {
+        "id": "daily-content",
+        "schedule": "0 6 * * *",
+        "timezone": "America/New_York",
+        "task": "Run the daily content workflow: aggregate news, filter for tech/AI/web dev, generate 3 options, send to me via WhatsApp",
+        "model": "anthropic/claude-haiku-4-5"
+      }
+    ]
+  }
+}
+```
+
+Sample staging folder structure:
+```
+~/content-staging/
+└── YYYY-MM-DD/
+    ├── options.md          # Original 3 options
+    ├── selected-topic.md   # The chosen topic details
+    ├── linkedin-draft.md   # LinkedIn post
+    ├── facebook-draft.md   # Facebook post
+    ├── image-prompt.txt    # Prompt used
+    └── image.png           # Generated image
+```
+
+**Cost note:** This workflow is light on tokens per run. With Haiku 4.5, expect $5-15/month for a daily cron job. A good candidate for the budget tier.
+
 ### Not a Great Use Case: Deep Coding Work
 
 For actual development, Claude Code is better:
@@ -296,6 +346,10 @@ Since you're already a Claude Code user, here's the direct comparison.
 │ Automated notifications                  │ Moltbot     │
 │                                          │             │
 │ Deep debugging                           │ Claude Code │
+│                                          │             │
+│ Daily content curation via cron          │ Moltbot     │
+│                                          │             │
+│ Multi-step workflows triggered by phone  │ Moltbot     │
 └──────────────────────────────────────────┴─────────────┘
 ```
 
@@ -484,7 +538,33 @@ moltbot onboard --auth-choice anthropic-api-key
    - Telegram is easiest (just create a bot token)
    - WhatsApp requires more setup
 
-3. **Test the memory:**
+3. **Enable browser automation** (optional, for workflows that need web browsing):
+   ```json
+   {
+     "browser": {
+       "enabled": true,
+       "defaultProfile": "clawd"
+     }
+   }
+   ```
+
+4. **Set up cron jobs** (optional, for scheduled workflows):
+   ```json
+   {
+     "cron": {
+       "jobs": [
+         {
+           "id": "morning-checkin",
+           "schedule": "0 9 * * 1",
+           "timezone": "America/New_York",
+           "task": "Weekly priorities check-in"
+         }
+       ]
+     }
+   }
+   ```
+
+5. **Test the memory:**
    - Tell it something about your project
    - Close the session
    - Start a new session and ask about it
@@ -559,7 +639,7 @@ At $1000/month, you can process 150-200 influencers daily — far more than a hu
 
 ---
 
-## Part 10: First-Day Setup Checklist
+## Part 11: First-Day Setup Checklist
 
 A practical checklist for getting Moltbot running tomorrow morning.
 
@@ -602,9 +682,19 @@ A practical checklist for getting Moltbot running tomorrow morning.
 └───┴──────────────────────────────────────────────────────────────────────────────┴─────────┘
 ```
 
+### After Day One: Phased Testing
+
+Don't try to automate everything on day one. Use a phased approach:
+
+**Phase 1 (Weekend):** Install, configure API key, test memory and messaging manually via `moltbot chat`.
+
+**Phase 2 (Week 1):** Set up one cron job (e.g., morning check-in). Verify timing and delivery. Test the reply-triggers-action flow.
+
+**Phase 3 (Week 2):** Run your first real workflow end-to-end. Note friction points and adjust prompts/config. Run the model comparison test (Part 9) if considering upgrading tiers.
+
 ---
 
-## Part 11: Common Gotchas
+## Part 12: Common Gotchas
 
 Things that trip people up on day one.
 
@@ -630,7 +720,61 @@ Things that trip people up on day one.
 
 ---
 
-## Part 9: The Bottom Line
+## Part 9: How to Compare Models (Test Protocol)
+
+Before committing to a model tier, run the same workflow with Haiku, Sonnet, and Opus. This gives you real cost-vs-quality data instead of guessing.
+
+### Test Protocol
+
+1. Define one representative task (e.g., the daily content workflow)
+2. Run it identically with each model
+3. Record token usage (input + output) and actual cost
+4. Rate output quality on a 1-5 scale across dimensions relevant to your task
+5. Calculate quality-per-dollar to find the sweet spot
+
+### Switching Models
+
+Use the `/model` command in Moltbot:
+```
+/model anthropic/claude-haiku-4-5
+/model anthropic/claude-sonnet-4-5
+/model anthropic/claude-opus-4-5
+```
+
+Or update config:
+```json
+{
+  "agent": {
+    "model": {
+      "primary": "anthropic/claude-haiku-4-5"
+    }
+  }
+}
+```
+
+### What to Measure
+
+```
+┌──────────────────────┬─────────────────────────────────────────────────┐
+│ Metric               │ Why It Matters                                  │
+├──────────────────────┼─────────────────────────────────────────────────┤
+│ Input/output tokens  │ Determines actual cost per run                  │
+│                      │                                                 │
+│ Output quality (1-5) │ Does it meet your bar? Some tasks don't need 5 │
+│                      │                                                 │
+│ Task failures        │ Cheaper models may fail complex multi-step work │
+│                      │                                                 │
+│ Quality per dollar   │ The real decision metric                        │
+└──────────────────────┴─────────────────────────────────────────────────┘
+```
+
+### Extrapolation
+
+Once you have per-run cost data, multiply by 30 for monthly projections. If your test task uses X tokens, a 10x larger workflow will cost roughly 10x — use this to estimate before scaling up.
+
+---
+
+## Part 10: The Bottom Line
 
 ### Decision Matrix
 
@@ -662,7 +806,7 @@ Things that trip people up on day one.
 
 **For the client with deep pockets:** If they have $1000/month budget and a clear workflow (like influencer outreach), Moltbot with Opus 4.5 can genuinely deliver 10x ROI on repetitive, criteria-based work. The key is defining the workflow precisely in AGENTS.md.
 
-**For tomorrow morning:** Start with Haiku 4.5 via the Anthropic API ($5-20/month). Native Claude compatibility and cheap enough to just explore. Follow the First-Day Setup Checklist (Part 10) and see if the tool fits your thinking style before scaling up to Sonnet or Opus.
+**For tomorrow morning:** Start with Haiku 4.5 via the Anthropic API ($5-20/month). Native Claude compatibility and cheap enough to just explore. Follow the First-Day Setup Checklist (Part 11) and see if the tool fits your thinking style before scaling up to Sonnet or Opus.
 
 ---
 
