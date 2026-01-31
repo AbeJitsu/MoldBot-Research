@@ -46,6 +46,9 @@ app.prepare().then(() => {
       }
       activeWs = ws;
 
+      // Tell the client the session is live
+      ws.send(JSON.stringify({ type: "status", status: "connected" }));
+
       // Wire up the existing PTY to the new WebSocket
       const dataHandler = activePty.onData((data: string) => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -74,28 +77,53 @@ app.prepare().then(() => {
         if (activeWs === ws) {
           activeWs = null;
         }
-        // Keep PTY alive for reconnection
       });
 
-      // Send a note that we reconnected
       ws.send("\r\n\x1b[33m[Reconnected to existing session]\x1b[0m\r\n");
       return;
     }
 
-    // Spawn a new claude session
-    const shell = pty.spawn("claude", [], {
-      name: "xterm-256color",
-      cols: 80,
-      rows: 30,
-      cwd: process.env.HOME || "/",
-      env: {
-        ...process.env,
-        TERM: "xterm-256color",
-      } as Record<string, string>,
-    });
+    // Resolve claude binary — ~/.local/bin may not be in default PATH
+    const home = process.env.HOME || "/Users/abereyes";
+    const claudePath = `${home}/.local/bin/claude`;
+
+    // Ensure ~/.local/bin is in PATH for child processes
+    const envPath = process.env.PATH || "";
+    const localBin = `${home}/.local/bin`;
+    const fullPath = envPath.includes(localBin) ? envPath : `${localBin}:${envPath}`;
+
+    let shell;
+    try {
+      shell = pty.spawn(claudePath, [], {
+        name: "xterm-256color",
+        cols: 80,
+        rows: 30,
+        cwd: home,
+        env: {
+          ...process.env,
+          TERM: "xterm-256color",
+          PATH: fullPath,
+        } as Record<string, string>,
+      });
+    } catch (error: any) {
+      console.error("Failed to spawn claude PTY:", error.message);
+      ws.send(JSON.stringify({ type: "status", status: "error", message: error.message }));
+      ws.send(
+        "\r\n\x1b[31m[Failed to start Claude session]\x1b[0m\r\n" +
+        `\x1b[33mError: ${error.message}\x1b[0m\r\n\r\n` +
+        "\x1b[90mThis usually means:\x1b[0m\r\n" +
+        "\x1b[90m  - PTY allocation blocked (run server from a real terminal, not inside Claude Code)\x1b[0m\r\n" +
+        "\x1b[90m  - claude binary not found at: " + claudePath + "\x1b[0m\r\n" +
+        "\x1b[90m  - node-pty native module needs rebuild: npm rebuild node-pty\x1b[0m\r\n"
+      );
+      return;
+    }
 
     activePty = shell;
     activeWs = ws;
+
+    // Tell the client the session is live
+    ws.send(JSON.stringify({ type: "status", status: "connected" }));
 
     shell.onData((data: string) => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -106,6 +134,7 @@ app.prepare().then(() => {
     shell.onExit(() => {
       activePty = null;
       if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "status", status: "ended" }));
         ws.send("\r\n\x1b[31m[Claude session ended]\x1b[0m\r\n");
         ws.close();
       }
@@ -129,7 +158,6 @@ app.prepare().then(() => {
       if (activeWs === ws) {
         activeWs = null;
       }
-      // Keep PTY alive — next connection will reconnect
     });
   });
 

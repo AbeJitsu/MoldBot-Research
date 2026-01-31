@@ -2,22 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type Status = "connecting" | "connected" | "error" | "disconnected";
+
 export default function Terminal() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<any>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("connecting");
+  const [status, setStatus] = useState<Status>("connecting");
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
     async function init() {
-      // Dynamic imports — xterm is browser-only
       const { Terminal } = await import("@xterm/xterm");
       const { FitAddon } = await import("@xterm/addon-fit");
       const { WebLinksAddon } = await import("@xterm/addon-web-links");
-
-      // xterm CSS is imported in globals.css
 
       if (!terminalRef.current) return;
 
@@ -48,32 +48,47 @@ export default function Terminal() {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setStatus("connected");
-        // Send initial terminal size
+        // Don't set connected yet — wait for server to confirm PTY is alive
         ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
       };
 
       ws.onmessage = (event) => {
+        // Check for JSON status messages from server
+        try {
+          const parsed = JSON.parse(event.data);
+          if (parsed.type === "status") {
+            if (parsed.status === "connected") {
+              setStatus("connected");
+            } else if (parsed.status === "error") {
+              setStatus("error");
+              setErrorMsg(parsed.message || "Unknown error");
+            } else if (parsed.status === "ended") {
+              setStatus("disconnected");
+            }
+            return;
+          }
+        } catch {
+          // Not JSON — it's terminal output
+        }
         term.write(event.data);
       };
 
       ws.onclose = () => {
         setStatus("disconnected");
-        term.write("\r\n\x1b[31m[Session disconnected. Refresh to reconnect.]\x1b[0m\r\n");
+        term.write("\r\n\x1b[31m[Disconnected from server. Refresh to reconnect.]\x1b[0m\r\n");
       };
 
       ws.onerror = () => {
-        setStatus("disconnected");
+        setStatus("error");
+        setErrorMsg("WebSocket connection failed");
       };
 
-      // Send keystrokes to server
       term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(data);
         }
       });
 
-      // Handle resize
       const resizeObserver = new ResizeObserver(() => {
         fitAddon.fit();
         if (ws.readyState === WebSocket.OPEN) {
@@ -96,24 +111,21 @@ export default function Terminal() {
     };
   }, []);
 
+  const statusConfig: Record<Status, { color: string; label: string }> = {
+    connecting: { color: "bg-yellow-400 animate-pulse", label: "Connecting..." },
+    connected: { color: "bg-emerald-400", label: "Claude Code session active" },
+    error: { color: "bg-red-400", label: errorMsg || "Failed to start session" },
+    disconnected: { color: "bg-gray-400", label: "Disconnected" },
+  };
+
+  const { color, label } = statusConfig[status];
+
   return (
     <div className="flex flex-col h-full">
       {/* Status bar */}
       <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-900 text-xs">
-        <span
-          className={`w-2 h-2 rounded-full ${
-            status === "connected"
-              ? "bg-emerald-400"
-              : status === "connecting"
-              ? "bg-yellow-400 animate-pulse"
-              : "bg-red-400"
-          }`}
-        />
-        <span className="text-gray-400">
-          {status === "connected" && "Connected to Claude Code"}
-          {status === "connecting" && "Connecting..."}
-          {status === "disconnected" && "Disconnected"}
-        </span>
+        <span className={`w-2 h-2 rounded-full ${color}`} />
+        <span className="text-gray-400">{label}</span>
       </div>
 
       {/* Terminal */}
