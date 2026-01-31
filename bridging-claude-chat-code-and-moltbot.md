@@ -278,15 +278,46 @@ Claude Chat is the weakest link. Use it for quick questions where memory isn't n
 
 ---
 
-## Part 4: How Moltbot Calls Claude Code
+## Part 4: How OpenClaw Calls Claude Code
 
-### Basic Execution
+### The Bridge Script
 
+Direct `claude -p` calls from OpenClaw's exec tool have issues: the command gets backgrounded before it finishes, and the output isn't captured. The solution is a bridge script that forces synchronous execution.
+
+**`~/claude-memory/scripts/claude-bridge.sh`:**
 ```bash
-# Moltbot runs this as a shell command on Mac Mini
-claude -p "Add a dark mode toggle to the settings page. Use the existing ThemeContext." \
-  --output-format json
+#!/bin/bash
+# Bridge script: runs claude -p synchronously and outputs result
+# Usage: claude-bridge.sh <project-dir> <prompt>
+
+PROJECT_DIR="$1"
+shift
+PROMPT="$*"
+
+cd "$PROJECT_DIR" || exit 1
+
+# Run claude -p and capture output directly
+# < /dev/null closes stdin (required for non-interactive exec)
+OUTPUT=$(claude -p "$PROMPT" --output-format json --allowedTools "Bash,Read,Edit,Write" 2>&1 < /dev/null)
+
+# Extract just the result text from JSON
+echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result','no result'))" 2>/dev/null || echo "$OUTPUT"
 ```
+
+**Key details:**
+- `< /dev/null` — closes stdin so `claude -p` doesn't hang waiting for input in a non-interactive shell
+- `--output-format json` — structured output that the script parses to extract just the result text
+- `2>&1` — captures stderr alongside stdout
+- The python one-liner extracts the `result` field from Claude Code's JSON output
+
+### Telling Bridgette to Use the Bridge
+
+From Telegram, send commands like:
+```
+run this exact command: ~/claude-memory/scripts/claude-bridge.sh ~/Projects/Personal/Need_This_Done "what files are in the root of this project?"
+```
+
+For natural language routing, add this to SOUL.md so Bridgette knows to use the bridge for coding tasks automatically (see Part 5).
 
 ### Session Continuity (Multi-Step Tasks)
 
@@ -298,24 +329,74 @@ session_id=$(claude -p "Scaffold the auth middleware" --output-format json | jq 
 claude -p "Now add JWT validation" --resume "$session_id" --output-format json
 ```
 
-### With Tool Permissions
-
-```bash
-claude -p "Fix the failing test in cart.spec.ts" \
-  --allowedTools "Bash,Read,Edit" \
-  --output-format json
-```
-
 ### Reviewing Results
 
-After Moltbot runs `claude -p`:
+After OpenClaw runs `claude -p`:
 - **Code changes** are on disk in your project — `git diff` shows them on either Mac
 - **`/resume`** in Claude Code IDE shows the full conversation transcript (only on the Mac that ran it)
-- **Moltbot messages you** a summary via WhatsApp/Telegram
+- **OpenClaw messages you** a summary via Telegram
+
+### What Didn't Work (And Why)
+
+These approaches were tried and failed during initial setup:
+
+| Approach | Problem |
+|----------|---------|
+| Direct `claude -p` in exec | OpenClaw backgrounds commands after 10s (`PI_BASH_YIELD_MS` default). `claude -p` takes 7-40s. |
+| Running gateway as LaunchAgent | `claude -p` authenticates via macOS Keychain (Max subscription). LaunchAgent daemons can't access the Keychain — fails with "Invalid API key." |
+| Denying exec/bash tools and using only `process` | Catch-22: `claude -p` IS a shell command, so it needs exec/bash to run. |
+| Denying `group:fs` to force Claude Code routing | Bridgette's subagents also lost filesystem access, couldn't function. |
+| VS Code + gateway simultaneously | VS Code used 31 GB RAM. macOS killed `claude -p` with SIGKILL due to memory pressure. |
 
 ---
 
-## Part 5: Moltbot Configuration for the Bridge
+## Part 5: OpenClaw Configuration for the Bridge
+
+### Gateway: Terminal Session (Not LaunchAgent)
+
+**Critical:** The gateway must run in a terminal session, not as a LaunchAgent daemon. `claude -p` authenticates via the macOS Keychain (Max subscription), and LaunchAgent daemons can't access the Keychain.
+
+```bash
+# Start the gateway with increased yield timeout
+# PI_BASH_YIELD_MS=120000 gives claude -p up to 2 minutes before backgrounding
+PI_BASH_YIELD_MS=120000 openclaw gateway run
+```
+
+Keep this terminal tab open. The gateway runs in the foreground.
+
+**Why not LaunchAgent?**
+
+| | LaunchAgent | Terminal session |
+|---|---|---|
+| Starts on boot | Yes | No |
+| Keychain access | No — `claude -p` fails | Yes — `claude -p` works |
+| `PI_BASH_YIELD_MS` | Requires plist env var | Just set inline |
+
+**Tip:** Use `tmux` or `screen` to keep the gateway running if you close the terminal window.
+
+### PI_BASH_YIELD_MS — The Key Setting
+
+OpenClaw's exec tool backgrounds commands after a yield timeout (default: 10 seconds). `claude -p` typically takes 7-40 seconds. Without increasing this, the command gets backgrounded and output is lost.
+
+Set `PI_BASH_YIELD_MS=120000` (2 minutes) to give `claude -p` enough time to complete synchronously.
+
+### Tool Deny List
+
+`~/.openclaw/openclaw.json`:
+```json
+{
+  "tools": {
+    "deny": ["group:fs", "browser", "canvas"]
+  }
+}
+```
+
+This denies Bridgette direct filesystem access (read, write, edit, apply_patch) and browser/canvas tools. She can still use `exec` to run the bridge script, which invokes `claude -p` — the stronger model handles filesystem operations with its own permission system.
+
+**OpenClaw tool group reference:**
+- `group:runtime`: exec, bash, process
+- `group:fs`: read, write, edit, apply_patch
+- `group:ui`: browser, canvas
 
 ### SOUL.md — Bridge Role
 
@@ -323,19 +404,21 @@ After Moltbot runs `claude -p`:
 # Role
 You bridge messaging to Claude Code. You are the persistent memory layer.
 
-# On receiving a task:
+# Tool restrictions
+You do NOT have read or write tools. Your ONLY way to interact with the filesystem
+is through `claude -p`. The exec tool is ONLY for running the bridge script or
+`claude -p` — never use it for anything else (no ls, cat, grep, git, etc.).
+
+# On receiving a coding task:
 1. Search memory for relevant context (use memory_search)
 2. Refine the user's rough request into a structured prompt
-3. Execute: claude -p "<prompt>" --output-format json --allowedTools "Bash,Read,Edit,Write"
-4. Log the result to memory (what changed, what was decided)
-5. Report back with a short summary
+3. Execute: ~/claude-memory/scripts/claude-bridge.sh <project-dir> "<prompt>"
+4. Report back with the result
+5. Log to memory (what changed, what was decided)
 
-# Prompt format for Claude Code:
-Task: [one-line summary]
-Context: [retrieved from memory search]
-Requirements: [specific acceptance criteria]
-Files: [known relevant files/paths]
-Constraints: [project rules — TDD, accessibility, BJJ color system]
+# Project routing table
+- "needthisdone" or "NTD" → ~/Projects/Personal/Need_This_Done
+- "moldbot" or "research" → ~/Projects/Personal/MoldBot Research
 
 # After execution:
 - Log result to ~/claude-memory/memory/YYYY-MM-DD.md
@@ -344,10 +427,16 @@ Constraints: [project rules — TDD, accessibility, BJJ color system]
 
 ### Config — Haiku Model
 
-`~/.clawdbot/config.json`:
+`~/.openclaw/openclaw.json`:
 ```json
 {
-  "model": "claude-haiku-4-5-20241022"
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-haiku-4-5"
+      }
+    }
+  }
 }
 ```
 
@@ -727,23 +816,41 @@ cp pre-compact-memory.sh .claude/hooks/
 chmod +x .claude/hooks/pre-compact-memory.sh
 ```
 
-### Step 7: Test End-to-End
+### Step 7: Create the Bridge Script
 
 ```bash
-# 1. Verify Claude Code headless mode works
+mkdir -p ~/claude-memory/scripts
+
+cat > ~/claude-memory/scripts/claude-bridge.sh << 'EOF'
+#!/bin/bash
+PROJECT_DIR="$1"
+shift
+PROMPT="$*"
+cd "$PROJECT_DIR" || exit 1
+OUTPUT=$(claude -p "$PROMPT" --output-format json --allowedTools "Bash,Read,Edit,Write" 2>&1 < /dev/null)
+echo "$OUTPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result','no result'))" 2>/dev/null || echo "$OUTPUT"
+EOF
+
+chmod +x ~/claude-memory/scripts/claude-bridge.sh
+```
+
+### Step 8: Test End-to-End
+
+```bash
+# 1. Verify claude -p works from your terminal
 claude -p "echo hello" --output-format json
 
-# 2. Verify OpenClaw is running
-openclaw status --all
+# 2. Verify the bridge script works
+~/claude-memory/scripts/claude-bridge.sh ~/Projects/Personal/Need_This_Done "what is in package.json name field?"
 
-# 3. Send a test message via Telegram to your bot
-#    "create a file called test.txt with hello world"
+# 3. Start the gateway in a terminal (NOT as LaunchAgent)
+PI_BASH_YIELD_MS=120000 openclaw gateway run
 
-# 4. Check memory was updated
-cat ~/claude-memory/memory/$(date +%Y-%m-%d).md
+# 4. In a separate tab, verify gateway is up
+openclaw gateway status
 
-# 5. Check git sync
-cd ~/claude-memory && git log --oneline -3
+# 5. Send a test message via Telegram to your bot:
+#    "run this exact command: ~/claude-memory/scripts/claude-bridge.sh ~/Projects/Personal/Need_This_Done "list the files in the root of this project""
 
 # 6. Run security audit
 openclaw security audit --deep
@@ -892,14 +999,28 @@ These fixes were applied during initial setup:
 
 **Key principle:** Never hardcode secrets in config files. Use environment variables in `~/.zshrc` and reference them with `${VAR_NAME}` in config. If a token is ever exposed (even in a private chat), rotate it immediately.
 
-### LaunchAgent Environment Variables
+### LaunchAgent vs Terminal Session
 
-The LaunchAgent daemon (`~/Library/LaunchAgents/ai.openclaw.gateway.plist`) does **not** inherit env vars from `~/.zshrc`. Any env var referenced in `openclaw.json` via `${VAR_NAME}` must also be added to the plist's `<EnvironmentVariables>` dict:
+**LaunchAgent does NOT work for the `claude -p` bridge.** The LaunchAgent daemon can't access the macOS Keychain, so `claude -p` fails with "Invalid API key" when authenticating with a Max subscription. LaunchAgent also doesn't inherit env vars from `~/.zshrc`.
 
+**Use a terminal session instead:**
+```bash
+PI_BASH_YIELD_MS=120000 openclaw gateway run
+```
+
+If you previously installed the LaunchAgent, uninstall it:
+```bash
+openclaw gateway uninstall
+```
+
+**If you need the LaunchAgent for non-bridge use** (just Telegram chat, no `claude -p`), the plist's `<EnvironmentVariables>` dict must include all env vars referenced in `openclaw.json`:
 ```xml
 <key>EnvironmentVariables</key>
 <dict>
-  <!-- ... existing vars ... -->
+  <key>HOME</key>
+  <string>/Users/YOUR_USERNAME</string>
+  <key>PATH</key>
+  <string>/Users/YOUR_USERNAME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
   <key>OPENCLAW_TELEGRAM_BOT_TOKEN</key>
   <string>your-actual-token</string>
   <key>OPENCLAW_GATEWAY_TOKEN</key>
@@ -907,11 +1028,7 @@ The LaunchAgent daemon (`~/Library/LaunchAgents/ai.openclaw.gateway.plist`) does
 </dict>
 ```
 
-After editing the plist, reload:
-```bash
-launchctl unload ~/Library/LaunchAgents/ai.openclaw.gateway.plist
-launchctl load ~/Library/LaunchAgents/ai.openclaw.gateway.plist
-```
+Note: `~/.local/bin` must be in PATH for `claude` to be found.
 
 ### Ongoing Maintenance
 
@@ -966,13 +1083,23 @@ All components tested and working end-to-end.
 Phone/Browser (Telegram)
   ↓
 @needthisdone_bot → OpenClaw Gateway (127.0.0.1:18789)
-  ↓
+  ↓                  (running in terminal with PI_BASH_YIELD_MS=120000)
 Bridgette (Haiku 4.5) — reads SOUL.md, searches memory
   ↓
-claude -p → Claude Code (Opus/Sonnet via Max subscription)
+exec → ~/claude-memory/scripts/claude-bridge.sh <project-dir> "<prompt>"
+  ↓      (forces synchronous execution with < /dev/null)
+claude -p → Claude Code (Opus via Max subscription, Keychain auth)
   ↓
-Code changes on disk + memory updated in ~/claude-memory/
+Result text extracted from JSON → returned to Telegram
 ```
+
+### Critical Requirements for the Bridge
+
+1. **Gateway runs in a terminal session** (not LaunchAgent) — for macOS Keychain access
+2. **`PI_BASH_YIELD_MS=120000`** — prevents OpenClaw from backgrounding `claude -p`
+3. **Bridge script uses `< /dev/null`** — prevents `claude -p` from hanging on stdin
+4. **VS Code not running simultaneously** — it uses 30+ GB RAM, causing SIGKILL on `claude -p`
+5. **`claude` binary in PATH** — installed at `~/.local/bin/claude`
 
 ---
 
@@ -1769,4 +1896,4 @@ Once you have per-run cost data, multiply by 30 for monthly projections. If your
 
 ---
 
-*Last updated: January 30, 2026*
+*Last updated: January 31, 2026*
