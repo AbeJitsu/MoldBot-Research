@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Terminal from "@/components/Terminal";
+import MemoryEditor from "@/components/MemoryEditor";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"terminal" | "memory">("terminal");
@@ -40,11 +41,7 @@ export default function Home() {
       {/* Content */}
       <main className="flex-1 overflow-hidden">
         {activeTab === "terminal" && <Terminal />}
-        {activeTab === "memory" && (
-          <div className="p-6 text-gray-500">
-            Memory editor coming soon.
-          </div>
-        )}
+        {activeTab === "memory" && <MemoryEditor />}
       </main>
     </div>
   );
