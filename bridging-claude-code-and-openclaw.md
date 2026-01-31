@@ -1,6 +1,6 @@
-# Native Claude Code Dashboard
+# Bridgette — Native Claude Code Dashboard
 
-*Replacing OpenClaw with a self-hosted PTY-based dashboard.*
+*A self-hosted PTY-based dashboard replacing OpenClaw.*
 
 *Last updated: January 31, 2026*
 
@@ -8,7 +8,7 @@
 
 ## What This Is
 
-A Next.js app running on the Mac Mini that wraps a **live interactive Claude Code session** in the browser. No `claude -p`, no OpenClaw, no API key — just a real `claude` terminal session rendered via xterm.js, authenticated through macOS Keychain with your Max subscription.
+**Bridgette** is a Next.js app running on the Mac Mini that wraps a **live interactive Claude Code session** in the browser. No `claude -p`, no OpenClaw, no API key — just a real `claude` terminal session rendered via xterm.js, authenticated through macOS Keychain with your Max subscription.
 
 The dashboard adds memory management, automation triggers, scheduling, and monitoring around the terminal.
 
@@ -16,11 +16,29 @@ The dashboard adds memory management, automation triggers, scheduling, and monit
 
 ---
 
+## Current Status
+
+### Built
+- Memory system merged from ~/claude-memory (SOUL.md, IDENTITY.md, USER.md, AGENTS.md, MEMORY.md, TOOLS.md, HEARTBEAT.md, context/)
+- Terminal core: custom server.ts with node-pty + WebSocket + xterm.js
+- Session persistence: PTY stays alive on browser disconnect, reconnects on refresh
+- Dashboard shell: header with tab navigation, connection status indicator
+- Build passes clean, dev server runs on localhost:3000
+
+### Remaining
+- Memory editor UI (read/edit .md files in browser)
+- API routes for memory CRUD, automation triggers, health check
+- Automation prompt templates (content creation, job search, codebase eval)
+- launchd plists for scheduled triggers
+- Log viewer and status page
+
+---
+
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  Next.js App (localhost:3000)                            │
+│  Bridgette (localhost:3000)                              │
 │                                                          │
 │  ┌─────────────────────┐  ┌───────────────────────────┐  │
 │  │  Dashboard UI        │  │  Terminal Panel           │  │
@@ -57,7 +75,7 @@ The dashboard adds memory management, automation triggers, scheduling, and monit
 
 **Terminal core:** `node-pty` spawns `claude` in a pseudo-terminal. A WebSocket server pipes PTY stdout to the browser and browser keystrokes back to PTY stdin. `xterm.js` renders the terminal in the browser. Claude authenticates via macOS Keychain — same as running `claude` in iTerm.
 
-**Session management:** One active session at a time. Browser refresh reconnects to the existing PTY. "New session" button kills and respawns. Working directory selector chooses which project to open claude in.
+**Session management:** One active session at a time. Browser refresh reconnects to the existing PTY. Working directory selector (planned) will choose which project to open claude in.
 
 **Automations:** Prompt templates that get pasted into the active terminal session, or spawned as separate `claude -p` calls for fire-and-forget background tasks. Triggered manually via dashboard buttons or on schedule via launchd `curl` commands.
 
@@ -65,12 +83,13 @@ The dashboard adds memory management, automation triggers, scheduling, and monit
 
 ## Key Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| `node-pty` | Spawn claude in pseudo-terminal |
-| `xterm.js` + addons | Terminal renderer in browser |
-| `ws` | WebSocket server for PTY ↔ browser |
-| `next` + `react` + `tailwindcss` | Dashboard app |
+| Package | Purpose | Status |
+|---------|---------|--------|
+| `node-pty` | Spawn claude in pseudo-terminal | Working |
+| `xterm.js` + addons | Terminal renderer in browser | Working |
+| `ws` | WebSocket server for PTY ↔ browser | Working |
+| `next` + `react` + `tailwindcss` | Dashboard app | Working |
+| `tsx` | Run TypeScript custom server | Working |
 
 ---
 
@@ -78,33 +97,35 @@ The dashboard adds memory management, automation triggers, scheduling, and monit
 
 ```
 OpenClaw Research/
-├── memory/              ← merged from ~/claude-memory
-│   ├── SOUL.md          ← personality and tone
-│   ├── IDENTITY.md      ← who the assistant is
-│   ├── USER.md          ← context about Abe
-│   ├── AGENTS.md        ← behavior rules
-│   ├── HEARTBEAT.md     ← monitoring checklist
-│   ├── MEMORY.md        ← curated persistent facts
-│   ├── TOOLS.md         ← local environment notes
-│   └── context/         ← active work, decisions, preferences
-├── app/                 ← Next.js dashboard
+├── memory/                  ← merged from ~/claude-memory
+│   ├── SOUL.md              ← personality and tone
+│   ├── IDENTITY.md          ← who the assistant is
+│   ├── USER.md              ← context about Abe
+│   ├── AGENTS.md            ← behavior rules
+│   ├── HEARTBEAT.md         ← monitoring checklist
+│   ├── MEMORY.md            ← curated persistent facts
+│   ├── TOOLS.md             ← local environment notes
+│   ├── AUDIT_RESULTS.md     ← NTD code quality report
+│   ├── context/             ← active work, decisions, preferences
+│   └── scripts/             ← archived bridge script
+├── app/                     ← Bridgette (Next.js dashboard)
+│   ├── server.ts            ← custom HTTP + WebSocket server
 │   ├── components/
-│   │   └── Terminal.tsx
-│   ├── lib/
-│   │   └── pty-server.ts
-│   ├── api/
-│   │   ├── memory/
-│   │   ├── automations/
-│   │   └── health/
-│   └── terminal/
-│       └── page.tsx
-├── automations/         ← prompt templates
+│   │   └── Terminal.tsx      ← xterm.js terminal component
+│   ├── app/
+│   │   ├── layout.tsx        ← root layout
+│   │   ├── page.tsx          ← dashboard home (tabs)
+│   │   └── globals.css       ← Tailwind + xterm CSS
+│   ├── next.config.ts        ← node-pty external packages
+│   ├── package.json          ← dependencies
+│   └── CLAUDE.md             ← app-specific notes
+├── automations/             ← prompt templates (planned)
 │   ├── content-creation/
 │   ├── job-search/
 │   └── codebase-eval/
-├── launchd/             ← plist templates
-├── server.ts            ← custom Next.js server (WebSocket)
-└── CLAUDE.md
+├── launchd/                 ← plist templates (planned)
+├── CLAUDE.md                ← project-level memory
+└── bridging-claude-code-and-openclaw.md  ← this file
 ```
 
 ---
@@ -132,7 +153,7 @@ Curated over automated. Actively edit as understanding evolves. Remove dead ends
 
 ### Dashboard Integration
 
-The memory editor in the dashboard reads and writes these files directly. No database — markdown is the source of truth.
+The memory editor (planned) will read and write these files directly. No database — markdown is the source of truth.
 
 ---
 
@@ -162,12 +183,12 @@ The memory editor in the dashboard reads and writes these files directly. No dat
 
 ## Scheduling
 
-launchd plists trigger automations by curling the Next.js API:
+launchd plists will trigger automations by curling the Next.js API:
 
 ```
-com.openclaw.content-creation.plist  →  curl POST localhost:3000/api/automations/content-creation
-com.openclaw.job-search.plist        →  curl POST localhost:3000/api/automations/job-search
-com.openclaw.codebase-eval.plist     →  curl POST localhost:3000/api/automations/codebase-eval
+com.bridgette.content-creation.plist  →  curl POST localhost:3000/api/automations/content-creation
+com.bridgette.job-search.plist        →  curl POST localhost:3000/api/automations/job-search
+com.bridgette.codebase-eval.plist     →  curl POST localhost:3000/api/automations/codebase-eval
 ```
 
 Install: symlink plists from `launchd/` into `~/Library/LaunchAgents/`.
@@ -178,7 +199,7 @@ Install: symlink plists from `launchd/` into `~/Library/LaunchAgents/`.
 
 - Always on, screen locked, never sleeps
 - Chrome open (for Claude in Chrome browser automation)
-- Terminal session running `npm run dev` for the dashboard
+- Terminal session running `cd app && npm run dev`
 - `~/.local/bin` in PATH (where `claude` lives)
 
 ---
@@ -194,8 +215,8 @@ Install: symlink plists from `launchd/` into `~/Library/LaunchAgents/`.
 
 ## What Changed From OpenClaw
 
-| Before (OpenClaw) | After (Native) |
-|--------------------|----------------|
+| Before (OpenClaw) | After (Bridgette) |
+|--------------------|-------------------|
 | OpenClaw gateway + Haiku API (~$30/mo) | Next.js app + Max subscription ($0 extra) |
 | `claude -p` headless mode | Live interactive `claude` session via PTY |
 | Telegram for remote messaging | Dashboard in browser, webhook for remote |
@@ -214,4 +235,4 @@ The original OpenClaw bridge setup documentation is preserved in git history. Ke
 - Telegram bot via BotFather for remote messaging
 - `PI_BASH_YIELD_MS=120000` env var for long-running commands
 
-These are no longer needed with the native dashboard approach.
+These are no longer needed with Bridgette.
