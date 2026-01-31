@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.bridgette.job-search</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/curl</string>
+		<string>-s</string>
+		<string>-X</string>
+		<string>POST</string>
+		<string>http://localhost:3000/api/automations/job-search</string>
+	</array>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>5</integer>
+		<key>Minute</key>
+		<integer>15</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/tmp/bridgette-job-search.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/bridgette-job-search.err</string>
+</dict>
+</plist>
