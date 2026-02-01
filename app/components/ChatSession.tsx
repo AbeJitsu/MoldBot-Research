@@ -703,28 +703,30 @@ export default function ChatSession() {
           {autoEval && (
             <button
               onClick={() => {
-                if (!evalRunning) {
+                if (evalRunning) {
+                  wsRef.current?.send(JSON.stringify({ type: "stop_auto_eval" }));
+                } else {
                   wsRef.current?.send(JSON.stringify({ type: "trigger_auto_eval" }));
                 }
               }}
-              disabled={status === "streaming" || evalRunning}
+              disabled={status === "streaming"}
               className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-150 border cursor-pointer disabled:cursor-not-allowed ${
                 evalRunning
                   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 animate-subtle-pulse"
                   : "bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/25 hover:text-blue-200 hover:border-blue-400/50 hover:shadow-sm hover:shadow-blue-500/20 active:bg-blue-500/35 active:scale-95 disabled:opacity-40"
               }`}
-              title={evalRunning ? "Auto-eval running..." : "Run auto-eval now"}
+              title={evalRunning ? "Click to stop auto-eval" : "Run auto-eval now"}
             >
               {evalRunning ? (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="animate-spin">
-                  <path d="M12 2a10 10 0 0 1 10 10" />
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-red-400">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
                 </svg>
               ) : (
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5,3 19,12 5,21" />
                 </svg>
               )}
-              {evalRunning ? `Running: ${evalType ? evalType.charAt(0).toUpperCase() + evalType.slice(1) : "Eval"}...` : "Run Now"}
+              {evalRunning ? `Stop: ${evalType ? evalType.charAt(0).toUpperCase() + evalType.slice(1) : "Eval"}` : "Run Now"}
             </button>
           )}
 

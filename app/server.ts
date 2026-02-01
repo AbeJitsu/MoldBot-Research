@@ -691,6 +691,11 @@ app.prepare().then(() => {
           broadcastToChat({ type: "auto_eval_state", enabled: serverAutoEvalEnabled, evalTimerStart: serverIdleTimerStart, evalChaining });
         } else if (parsed.type === "trigger_auto_eval") {
           triggerServerAutoEval();
+        } else if (parsed.type === "stop_auto_eval") {
+          if (serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null) {
+            console.log("[auto-eval] Stopping eval via user request");
+            killProcessWithTimeout(serverAutoEvalProcess);
+          }
         } else if (parsed.type === "set_eval_interval") {
           const ms = typeof parsed.interval === "number" ? parsed.interval : 0;
           if (ms >= MIN_EVAL_INTERVAL && ms <= MAX_EVAL_INTERVAL) {

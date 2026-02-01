@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import ChatSession from "@/components/ChatSession";
 import MemoryEditor from "@/components/MemoryEditor";
 import Automations from "@/components/Automations";
@@ -20,7 +20,25 @@ const TABS: { id: Tab; label: string; icon: string; activeClass: string }[] = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Cmd+1-5 keyboard shortcuts for tab switching
+  useEffect(() => {
+    function handleGlobalKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const num = parseInt(e.key, 10);
+      if (num >= 1 && num <= TABS.length) {
+        e.preventDefault();
+        const tab = TABS[num - 1];
+        setActiveTab(tab.id);
+        tabRefs.current[num - 1]?.focus();
+      }
+    }
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
     const currentIndex = TABS.findIndex((t) => t.id === activeTab);
@@ -90,11 +108,38 @@ export default function Home() {
       {/* Content — all tabs stay mounted, hidden via CSS to preserve state */}
       <main className="flex-1 overflow-hidden flex flex-col">
         <div role="tabpanel" id="tabpanel-chat" aria-labelledby="tab-chat" tabIndex={0} className={`flex-1 overflow-hidden flex ${activeTab !== "chat" ? "hidden" : ""}`} hidden={activeTab !== "chat" || undefined}>
-          <LeftTaskPanel />
+          {/* Left panel toggle */}
+          {!leftPanelOpen && (
+            <button
+              onClick={() => setLeftPanelOpen(true)}
+              className="flex-shrink-0 w-8 flex items-center justify-center border-r border-white/[0.06] hover:bg-white/[0.03] transition-colors text-gray-600 hover:text-gray-400"
+              style={{ background: 'var(--surface-1)' }}
+              title="Show pending tasks"
+              aria-label="Show pending tasks panel"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          )}
+          {leftPanelOpen && <LeftTaskPanel onCollapse={() => setLeftPanelOpen(false)} />}
           <div className="flex-1 overflow-hidden">
             <ChatSession />
           </div>
-          <RightTaskPanel />
+          {rightPanelOpen && <RightTaskPanel onCollapse={() => setRightPanelOpen(false)} />}
+          {!rightPanelOpen && (
+            <button
+              onClick={() => setRightPanelOpen(true)}
+              className="flex-shrink-0 w-8 flex items-center justify-center border-l border-white/[0.06] hover:bg-white/[0.03] transition-colors text-gray-600 hover:text-gray-400"
+              style={{ background: 'var(--surface-1)' }}
+              title="Show active tasks"
+              aria-label="Show active tasks panel"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+          )}
         </div>
         <div role="tabpanel" id="tabpanel-memory" aria-labelledby="tab-memory" tabIndex={0} className={`flex-1 overflow-hidden ${activeTab !== "memory" ? "hidden" : ""}`} hidden={activeTab !== "memory" || undefined}>
           <MemoryEditor />
