@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { readdir, stat } from "fs/promises";
 import { join } from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 const MEMORY_DIR = join(process.cwd(), "..", "memory");
 
@@ -36,7 +37,8 @@ async function listFiles(dir: string, prefix = ""): Promise<MemoryFile[]> {
   return files;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   try {
     const files = await listFiles(MEMORY_DIR);
     return NextResponse.json({ files });

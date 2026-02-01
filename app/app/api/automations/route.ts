@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { readdir, readFile, stat } from "fs/promises";
 import { join } from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 const AUTOMATIONS_DIR = join(process.cwd(), "..", "automations");
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   try {
     const entries = await readdir(AUTOMATIONS_DIR, { withFileTypes: true });
     const automations = [];

@@ -14,32 +14,30 @@
 - **Memory system** — All personality, identity, and context files merged from ~/claude-memory into `memory/`
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
 - **Automations panel** — View/copy prompt templates, BJJ belt color coding, curl examples
-- **API routes** — `/api/memory/*` CRUD, `/api/automations/*` list/trigger, `/api/health`, `/api/directories`
+- **API routes** — `/api/memory/*` CRUD, `/api/automations/*` list/trigger, `/api/health`, `/api/directories`, `/api/status`, `/api/eval-logs`
 - **Prompt templates** — Content creation, job search, codebase eval in `automations/`
 - **launchd plists** — Scheduled curl triggers (5 AM daily, weekly Monday) + install script
 - **Three-panel chat layout** — Pending tasks (left), chat (center), in-progress/completed tasks (right)
 - **Task management** — Add/advance/delete tasks via sidebars, persisted to `tasks.json`, API at `/api/tasks`
 - **Dark mode** — Full dark theme (gray-950 bg), dark markdown styles, dark tool cards
-- **Dashboard** — Four-tab layout (Chat, Terminal, Memory, Automations) with BJJ belt colors
+- **Dashboard** — Five-tab layout (Chat, Memory, Automations, Eval Logs, Status) with BJJ belt colors
 - **Stop hook** — Blocks Claude from stopping if build is failing; forces iteration until passing
 - **Session resume** — Browse and resume previous conversations via session history dropdown (clock icon). Sessions saved to localStorage with first message, timestamp, model
+- **Eval Logs tab** — View auto-eval run history with type filtering, expandable diffs, status indicators. Supports frontend/backend/functionality/memory eval types
+- **Status tab** — Server health, git info, memory file timestamps, auto-eval config with rotation visualization, launchd job status. Auto-refreshes every 30s
 - **Build passes** — `next build` clean, dev server runs on localhost:3000, all APIs tested
 
 ### What's Left
-- **Log viewer** — View automation run history
-- **Status page** — launchd job status, memory file timestamps, server health
 - **Polish** — Design system refinements, responsive layout
 
 ## Architecture
 
 ```
 Browser (Chat UI)  ←WebSocket /ws/chat→  server.ts  ←stdio pipes→  claude --print --stream-json
-Browser (Terminal)  ←WebSocket /ws/terminal→  server.ts  ←node-pty→  claude (interactive PTY)
 ```
 
 - **Chat core:** `claude --print --output-format=stream-json --verbose --include-partial-messages` spawned per message via `child_process.spawn`. Session continuity via `--resume <session-id>`. Working directory configurable per connection.
-- **Terminal (legacy):** node-pty spawns `claude` in PTY, WebSocket pipes to xterm.js in browser
-- **Dashboard:** Next.js app with chat, memory editor, automation triggers
+- **Dashboard:** Next.js app with five tabs: Chat, Memory, Automations, Eval Logs, Status
 - **Memory:** Markdown files in `memory/` — curated, not automated
 - **Scheduling:** launchd plists curl API routes on schedule
 - **Auth:** Keychain via Max subscription (no API key needed)

@@ -27,7 +27,7 @@
 │  │  + Add   │  markdown, costs     │          │              │
 │  └──────────┴──────────┬───────────┴──────────┘              │
 │                        │                                      │
-│  Tabs: Chat | Memory | Automations                            │
+│  Tabs: Chat | Memory | Automations | Eval Logs | Status                            │
 │                                                              │
 │  Custom Server (Next.js + WebSocket)                         │
 │  ├── WS /ws/chat ← child_process spawn claude               │
@@ -74,7 +74,7 @@
 ### Dashboard
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
 - **Automations panel** — View/copy prompt templates with BJJ belt color coding
-- **Three-tab layout** — Chat, Memory, Automations
+- **Five-tab layout** — Chat, Memory, Automations, Eval Logs, Status
 
 ### Infrastructure
 - **Custom server** — Next.js + WebSocket on port 3000
@@ -89,8 +89,8 @@
 ## Roadmap
 
 ### Next Up: Polish & Operations
-- Log viewer for automation run history
-- Status page (launchd jobs, server health, memory timestamps)
+- ~~Log viewer for automation run history~~ — **Built** (Eval Logs tab)
+- ~~Status page (launchd jobs, server health, memory timestamps)~~ — **Built** (Status tab)
 - Responsive layout refinements
 - Error states and reconnection UX
 

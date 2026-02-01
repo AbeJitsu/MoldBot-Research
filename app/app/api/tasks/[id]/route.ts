@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { updateTask, deleteTask, isValidTaskId, VALID_STATUSES, type Task } from "../task-store";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isAuthorized(request)) return unauthorizedResponse();
 
   if (!isValidTaskId(id)) {
     return NextResponse.json({ error: "Invalid task ID format" }, { status: 400 });
@@ -59,10 +61,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isAuthorized(request)) return unauthorizedResponse();
 
   if (!isValidTaskId(id)) {
     return NextResponse.json({ error: "Invalid task ID format" }, { status: 400 });

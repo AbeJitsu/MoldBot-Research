@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 
 interface EvalLogEntry {
   id: string;
-  evalType: "frontend" | "backend" | "functionality";
+  evalType: "frontend" | "backend" | "functionality" | "memory";
   timestamp: string;
   branch: string;
   commitHash: string;
@@ -22,6 +22,7 @@ const TYPE_STYLES: Record<string, { text: string; bg: string; border: string }> 
   frontend: { text: "text-emerald-300", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
   backend: { text: "text-blue-300", bg: "bg-blue-500/10", border: "border-blue-500/20" },
   functionality: { text: "text-purple-300", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+  memory: { text: "text-amber-300", bg: "bg-amber-500/10", border: "border-amber-500/20" },
 };
 
 export default function EvalLogs() {
@@ -76,6 +77,7 @@ export default function EvalLogs() {
             <option value="frontend">Frontend</option>
             <option value="backend">Backend</option>
             <option value="functionality">Functionality</option>
+            <option value="memory">Memory</option>
           </select>
           {/* Refresh */}
           <button

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile, rename } from "fs/promises";
 import { join } from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 const MEMORY_DIR = join(process.cwd(), "..", "memory");
 
@@ -31,9 +32,10 @@ function resolveFilePath(filepath: string[]): string {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ filepath: string[] }> }
 ) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   try {
     const { filepath } = await params;
     const fullPath = resolveFilePath(filepath);
@@ -57,6 +59,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ filepath: string[] }> }
 ) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   try {
     const { filepath } = await params;
     const fullPath = resolveFilePath(filepath);

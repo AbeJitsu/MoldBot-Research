@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readdir } from "fs/promises";
 import { join, resolve } from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 const HOME_DIR = process.env.HOME || "/Users/abereyes";
 
@@ -15,6 +16,7 @@ function isAllowedPath(target: string): boolean {
 
 // List subdirectories of a given path for the directory picker
 export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) return unauthorizedResponse();
   const requestedPath = req.nextUrl.searchParams.get("path") || HOME_DIR;
   const resolvedPath = resolve(requestedPath);
 

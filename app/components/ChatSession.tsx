@@ -103,6 +103,10 @@ export default function ChatSession() {
   const [branch, setBranch] = useState<string | null>(null);
   const [evalRunning, setEvalRunning] = useState(false);
   const [evalType, setEvalType] = useState<string | null>(null);
+  const [evalTimerStart, setEvalTimerStart] = useState<number | null>(null);
+  const [evalChaining, setEvalChaining] = useState(false);
+  const [countdown, setCountdown] = useState<string | null>(null);
+  const [needsToken, setNeedsToken] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -147,6 +151,29 @@ export default function ChatSession() {
     setSessions(loadSessions());
   }, []);
 
+  // Countdown timer for auto-eval
+  useEffect(() => {
+    if (!autoEval || evalRunning || evalTimerStart === null) {
+      setCountdown(null);
+      return;
+    }
+    const delay = evalChaining ? 30 * 1000 : evalInterval;
+    const tick = () => {
+      const remaining = Math.max(0, evalTimerStart + delay - Date.now());
+      if (remaining <= 0) {
+        setCountdown("0s");
+        return;
+      }
+      const totalSec = Math.ceil(remaining / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      setCountdown(min > 0 ? `${min}m ${sec}s` : `${sec}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [autoEval, evalRunning, evalTimerStart, evalInterval, evalChaining]);
+
   const connectRef = useRef<(() => void) | null>(null);
 
   const connectWebSocket = useCallback(() => {
@@ -159,12 +186,15 @@ export default function ChatSession() {
     }
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+    const token = localStorage.getItem("bridgette-token") || "";
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : "";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat${tokenParam}`);
     wsRef.current = ws;
     setStatus("connecting");
 
     ws.onopen = () => {
       setStatus("connected");
+      setNeedsToken(false);
       reconnectAttemptRef.current = 0;
     };
 
@@ -177,9 +207,18 @@ export default function ChatSession() {
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       setStatus("disconnected");
       wsRef.current = null;
+
+      // If connection was rejected (never opened) and we're on a non-localhost host,
+      // likely a 401 — show token prompt instead of reconnecting endlessly
+      const isRemote = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+      if (event.code === 1006 && reconnectAttemptRef.current >= 2 && isRemote) {
+        setNeedsToken(true);
+        return;
+      }
+
       // Auto-reconnect with exponential backoff
       if (!reconnectTimerRef.current) {
         const attempt = reconnectAttemptRef.current;
@@ -221,11 +260,21 @@ export default function ChatSession() {
       if (data.evalInterval !== undefined) setEvalInterval(data.evalInterval);
       if (data.evalRunning !== undefined) setEvalRunning(!!data.evalRunning);
       if (data.evalType !== undefined) setEvalType(data.evalType);
+      if (data.evalTimerStart !== undefined) setEvalTimerStart(data.evalTimerStart);
+      if (data.evalChaining !== undefined) setEvalChaining(!!data.evalChaining);
       return;
     }
 
     if (type === "eval_interval_state") {
       if (data.interval !== undefined) setEvalInterval(data.interval);
+      if (data.evalTimerStart !== undefined) setEvalTimerStart(data.evalTimerStart);
+      if (data.evalChaining !== undefined) setEvalChaining(!!data.evalChaining);
+      return;
+    }
+
+    if (type === "eval_timer_state") {
+      if (data.evalTimerStart !== undefined) setEvalTimerStart(data.evalTimerStart);
+      if (data.evalChaining !== undefined) setEvalChaining(!!data.evalChaining);
       return;
     }
 
@@ -343,6 +392,7 @@ export default function ChatSession() {
       if (data.branch) setBranch(data.branch);
       setEvalRunning(true);
       setEvalType(data.evalType || null);
+      setEvalTimerStart(null);
       return;
     }
 
@@ -362,6 +412,8 @@ export default function ChatSession() {
 
     if (type === "auto_eval_state") {
       setAutoEval(!!data.enabled);
+      if (data.evalTimerStart !== undefined) setEvalTimerStart(data.evalTimerStart);
+      if (data.evalChaining !== undefined) setEvalChaining(!!data.evalChaining);
       return;
     }
 
@@ -503,6 +555,16 @@ export default function ChatSession() {
 
   const isReady = status === "connected" || status === "streaming";
 
+  // Token prompt for remote access
+  if (needsToken) {
+    return <TokenPrompt onSubmit={(token) => {
+      localStorage.setItem("bridgette-token", token);
+      setNeedsToken(false);
+      reconnectAttemptRef.current = 0;
+      connectWebSocket();
+    }} />;
+  }
+
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)' }}>
       {/* Status bar */}
@@ -611,6 +673,18 @@ export default function ChatSession() {
               )}
               {evalRunning ? `Running: ${evalType ? evalType.charAt(0).toUpperCase() + evalType.slice(1) : "Eval"}...` : "Run Now"}
             </button>
+          )}
+
+          {/* Countdown timer */}
+          {autoEval && !evalRunning && countdown && (
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded ${evalChaining ? "text-emerald-400" : "text-gray-500"}`}
+              style={{ fontFamily: 'var(--font-mono)' }}
+              title={evalChaining ? "Chaining — next eval in..." : "Next eval in..."}
+            >
+              {evalChaining && <span className="text-emerald-500 mr-1">chain</span>}
+              {countdown}
+            </span>
           )}
 
           {/* Branch indicator (always visible when not on main) */}
@@ -1211,4 +1285,48 @@ function getToolSummary(tool: ToolUse): string {
   if (tool.name === "Task" && input.description) return String(input.description);
 
   return "";
+}
+
+// ============================================
+// TOKEN PROMPT
+// ============================================
+
+function TokenPrompt({ onSubmit }: { onSubmit: (token: string) => void }) {
+  const [token, setToken] = useState("");
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-4" style={{ background: 'var(--surface-0)' }}>
+      <div className="w-full max-w-sm space-y-4">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 flex items-center justify-center border border-white/[0.06] mx-auto mb-3">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-200 mb-1">Authentication Required</h2>
+          <p className="text-sm text-gray-500">Enter your Bridgette access token to connect.</p>
+        </div>
+        <div>
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && token.trim()) onSubmit(token.trim()); }}
+            placeholder="Paste token here..."
+            className="w-full text-sm border border-white/[0.08] rounded-xl px-4 py-3 text-gray-100 focus:outline-none focus:border-emerald-500/40 transition-all duration-200 placeholder:text-gray-600"
+            style={{ background: 'var(--surface-2)', fontFamily: 'var(--font-mono)' }}
+            autoFocus
+          />
+        </div>
+        <button
+          onClick={() => { if (token.trim()) onSubmit(token.trim()); }}
+          disabled={!token.trim()}
+          className="w-full text-sm bg-emerald-500/90 text-white px-4 py-2.5 rounded-xl hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm shadow-emerald-500/20"
+        >
+          Connect
+        </button>
+      </div>
+    </div>
+  );
 }

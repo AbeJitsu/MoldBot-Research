@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,8 @@ function readEvalLogs(): EvalLogEntry[] {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   const logs = readEvalLogs();
   // Most recent first, capped at 50
   const sorted = logs

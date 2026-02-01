@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
 const AUTOMATIONS_DIR = join(process.cwd(), "..", "automations");
 
@@ -14,9 +15,10 @@ function isValidAutomation(name: string): boolean {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   const { name } = await params;
 
   if (!isValidAutomation(name)) {
@@ -39,9 +41,10 @@ export async function GET(
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   const { name } = await params;
 
   if (!isValidAutomation(name)) {

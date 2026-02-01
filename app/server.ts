@@ -623,7 +623,7 @@ app.prepare().then(() => {
             serverEvalInterval = ms;
             saveEvalInterval(ms);
             resetServerIdleTimer();
-            broadcastToChat({ type: "eval_interval_state", interval: serverEvalInterval });
+            broadcastToChat({ type: "eval_interval_state", interval: serverEvalInterval, evalTimerStart: serverIdleTimerStart, evalChaining });
           }
         }
       } catch {

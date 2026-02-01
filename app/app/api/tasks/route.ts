@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAllTasks, createTask, VALID_STATUSES, type Task } from "./task-store";
+import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   try {
     const tasks = await getAllTasks();
     return NextResponse.json(tasks);
@@ -13,6 +15,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isAuthorized(request)) return unauthorizedResponse();
   let body: Record<string, unknown>;
   try {
     body = await request.json();
