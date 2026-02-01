@@ -27,13 +27,14 @@
 │  │  + Add   │  markdown, costs     │          │              │
 │  └──────────┴──────────┬───────────┴──────────┘              │
 │                        │                                      │
-│  Tabs: Chat | Terminal | Memory | Automations                │
+│  Tabs: Chat | Memory | Automations                            │
 │                                                              │
 │  Custom Server (Next.js + WebSocket)                         │
 │  ├── WS /ws/chat ← child_process spawn claude               │
 │  ├── REST: /api/memory/*                                     │
 │  ├── REST: /api/automations/*                                │
 │  ├── REST: /api/tasks, /api/tasks/[id]                       │
+│  ├── REST: /api/eval-logs                                    │
 │  └── REST: /api/health, /api/directories                     │
 └──────────────────────────────────────────────────────────────┘
                │ stdio pipes (no PTY needed)
@@ -61,19 +62,19 @@
 - **Task management** — Add/advance/delete tasks, persisted to `tasks.json`, REST API
 - **Dark mode** — Full dark theme across all components and markdown
 - **Working directory selector** — Browse and select project directories, works even when disconnected
-- **Terminal (legacy)** — PTY-based terminal kept as fallback tab
+- **Memory integration** — All memory files injected into Claude via `--append-system-prompt`, cached with 60s TTL
 - **Session resume** — Browse and resume previous conversations via session history dropdown, localStorage persistence
 - **Model switcher** — Opus 4.5, Sonnet 4, Haiku 3.5 with localStorage persistence
 - **Task advance buttons** — Hover to reveal test/done actions on tasks
 - **Escape key + stop button** — Cancel streaming responses
 - **Stop hook** — TypeScript check + server health verification (no longer kills running server)
-- **Auto-iteration system** — Server-level idle detection (15 min), three-eval rotation (frontend → backend → functionality), merges main into dev before each run, persisted state, headless operation, manual trigger, change summaries
+- **Auto-iteration system** — Server-level idle detection (configurable 1min–2hr), four-eval rotation (frontend → backend → functionality → memory curator), merges main into dev before each run, persisted state, headless operation, manual trigger, change summaries
 - **Auto-eval test suite** — Vitest unit tests (rotation math) + integration tests (WebSocket message flow)
 
 ### Dashboard
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
 - **Automations panel** — View/copy prompt templates with BJJ belt color coding
-- **Four-tab layout** — Chat, Terminal, Memory, Automations
+- **Three-tab layout** — Chat, Memory, Automations
 
 ### Infrastructure
 - **Custom server** — Next.js + WebSocket on port 3000
@@ -102,7 +103,7 @@
 
 ### Auto-Iteration System (Built)
 - Server-level idle timer (15 min) — works with or without browser
-- **Three-eval rotation** — frontend → backend → functionality, wraps around
+- **Four-eval rotation** — frontend → backend → functionality → memory curator, wraps around
 - Rotation index persisted in `.auto-eval-index`, eval prompts in `automations/auto-eval/`
 - **Merges main into dev** before each eval run (aborts cleanly on conflicts)
 - Persisted to `.auto-eval-enabled` file, survives server restarts
@@ -134,7 +135,8 @@ OpenClaw Research/
 │   │   ├── ChatSession.tsx  ← chat UI (dark mode, streaming)
 │   │   ├── TaskPanel.tsx    ← left/right task sidebars
 │   │   ├── MemoryEditor.tsx
-│   │   └── Automations.tsx
+│   │   ├── Automations.tsx
+│   │   └── EvalLogs.tsx
 │   ├── app/
 │   │   ├── page.tsx         ← dashboard (three-panel + tabs)
 │   │   └── api/             ← REST endpoints
