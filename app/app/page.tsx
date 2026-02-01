@@ -5,24 +5,25 @@ import ChatSession from "@/components/ChatSession";
 import Terminal from "@/components/Terminal";
 import MemoryEditor from "@/components/MemoryEditor";
 import Automations from "@/components/Automations";
+import { LeftTaskPanel, RightTaskPanel } from "@/components/TaskPanel";
 
 type Tab = "chat" | "terminal" | "memory" | "automations";
 
 const TABS: { id: Tab; label: string; activeClass: string }[] = [
-  { id: "chat", label: "Chat", activeClass: "bg-emerald-100 text-emerald-700" },
-  { id: "terminal", label: "Terminal", activeClass: "bg-gray-200 text-gray-700" },
-  { id: "memory", label: "Memory", activeClass: "bg-blue-100 text-blue-700" },
-  { id: "automations", label: "Automations", activeClass: "bg-purple-100 text-purple-700" },
+  { id: "chat", label: "Chat", activeClass: "bg-emerald-900/50 text-emerald-400" },
+  { id: "terminal", label: "Terminal", activeClass: "bg-gray-700 text-gray-200" },
+  { id: "memory", label: "Memory", activeClass: "bg-blue-900/50 text-blue-400" },
+  { id: "automations", label: "Automations", activeClass: "bg-purple-900/50 text-purple-400" },
 ];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gray-950 text-gray-100">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white">
-        <h1 className="text-lg font-semibold text-gray-800">
+      <header className="flex items-center justify-between px-6 py-3 border-b border-gray-700 bg-gray-900">
+        <h1 className="text-lg font-semibold text-gray-100">
           Bridgette
         </h1>
         <nav className="flex gap-1">
@@ -33,7 +34,7 @@ export default function Home() {
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? tab.activeClass
-                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"
               }`}
             >
               {tab.label}
@@ -43,8 +44,16 @@ export default function Home() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-hidden">
-        {activeTab === "chat" && <ChatSession />}
+      <main className="flex-1 overflow-hidden flex">
+        {activeTab === "chat" && (
+          <>
+            <LeftTaskPanel />
+            <div className="flex-1 overflow-hidden">
+              <ChatSession />
+            </div>
+            <RightTaskPanel />
+          </>
+        )}
         {activeTab === "terminal" && <Terminal />}
         {activeTab === "memory" && <MemoryEditor />}
         {activeTab === "automations" && <Automations />}

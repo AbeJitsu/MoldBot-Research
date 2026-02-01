@@ -17,6 +17,9 @@
 - **API routes** — `/api/memory/*` CRUD, `/api/automations/*` list/trigger, `/api/health`, `/api/directories`
 - **Prompt templates** — Content creation, job search, codebase eval in `automations/`
 - **launchd plists** — Scheduled curl triggers (5 AM daily, weekly Monday) + install script
+- **Three-panel chat layout** — Pending tasks (left), chat (center), in-progress/completed tasks (right)
+- **Task management** — Add/advance/delete tasks via sidebars, persisted to `tasks.json`, API at `/api/tasks`
+- **Dark mode** — Full dark theme (gray-950 bg), dark markdown styles, dark tool cards
 - **Dashboard** — Four-tab layout (Chat, Terminal, Memory, Automations) with BJJ belt colors
 - **Stop hook** — Blocks Claude from stopping if build is failing; forces iteration until passing
 - **Build passes** — `next build` clean, dev server runs on localhost:3000, all APIs tested
@@ -72,6 +75,10 @@ Browser (Terminal)  ←WebSocket /ws/terminal→  server.ts  ←node-pty→  cla
 - `--include-partial-messages` gives `stream_event` with `content_block_delta` for real-time streaming
 - `--resume <session-id>` works for multi-turn conversations via `--print` mode
 - `@tailwindcss/typography` `@import` doesn't work with Next.js 15 + Tailwind v4 — use custom CSS classes instead
+- Hook commands with `$CLAUDE_PROJECT_DIR` must be quoted (`"$CLAUDE_PROJECT_DIR/..."`) when the project path contains spaces
+- `npm run dev` uses `server.ts` (custom server) — don't use `npx tsx server.ts` separately, the npm script handles it
+- When restarting the dev server, always `kill -9` the process on port 3000 first, then wait for port to be free before restarting
+- Task data stored in `tasks.json` at project root (not in `app/`)
 
 ## Commands
 

@@ -50,25 +50,49 @@ app.prepare().then(() => {
   const chatCwds = new Map<WebSocket, string>();
 
   const defaultCwd = process.env.HOME || "/Users/abereyes";
+  const cwdFile = require("path").join(process.cwd(), "..", ".last-cwd");
+
+  function getLastCwd(): string {
+    const fs = require("fs");
+    try {
+      const saved = fs.readFileSync(cwdFile, "utf-8").trim();
+      if (saved && fs.existsSync(saved) && fs.statSync(saved).isDirectory()) {
+        return saved;
+      }
+    } catch {}
+    return defaultCwd;
+  }
+
+  function saveLastCwd(cwd: string): void {
+    const fs = require("fs");
+    try { fs.writeFileSync(cwdFile, cwd); } catch {}
+  }
 
   wssChat.on("connection", (ws: WebSocket) => {
     chatSessions.set(ws, null);
-    chatCwds.set(ws, defaultCwd);
+    const initialCwd = getLastCwd();
+    chatCwds.set(ws, initialCwd);
 
     // Send initial state including cwd
-    ws.send(JSON.stringify({ type: "state", cwd: defaultCwd }));
+    ws.send(JSON.stringify({ type: "state", cwd: initialCwd }));
 
     ws.on("message", (msg: Buffer | string) => {
       try {
         const parsed = JSON.parse(msg.toString());
         if (parsed.type === "message") {
-          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws));
+          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.thinking);
+        } else if (parsed.type === "stop") {
+          const proc = chatProcesses.get(ws);
+          if (proc && !proc.killed) {
+            proc.kill("SIGTERM");
+          }
         } else if (parsed.type === "set_cwd") {
           // Validate directory exists
           const fs = require("fs");
           const target = parsed.cwd;
           if (target && fs.existsSync(target) && fs.statSync(target).isDirectory()) {
             chatCwds.set(ws, target);
+            saveLastCwd(target);
             // Reset session when changing directory (new context)
             chatSessions.set(ws, null);
             ws.send(JSON.stringify({ type: "state", cwd: target }));
@@ -92,7 +116,7 @@ app.prepare().then(() => {
     });
   });
 
-  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null) {
+  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, thinking?: boolean) {
     // Kill any existing process for this connection
     const existingProc = chatProcesses.get(ws);
     if (existingProc && !existingProc.killed) {
@@ -109,6 +133,11 @@ app.prepare().then(() => {
       "--verbose",
       "--include-partial-messages",
     ];
+
+    // Enable thinking if requested
+    if (thinking) {
+      args.push("--thinking");
+    }
 
     // Resume session if we have one
     if (sessionId) {

@@ -39,6 +39,7 @@ export default function ChatSession() {
   const [currentModel, setCurrentModel] = useState<string>("");
   const [cwd, setCwd] = useState<string>("");
   const [showDirPicker, setShowDirPicker] = useState(false);
+  const [thinking, setThinking] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -248,9 +249,9 @@ export default function ChatSession() {
     // Reset textarea height
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    wsRef.current.send(JSON.stringify({ type: "message", text, sessionId }));
+    wsRef.current.send(JSON.stringify({ type: "message", text, sessionId, thinking }));
     setStatus("streaming");
-  }, [input, status, sessionId]);
+  }, [input, status, sessionId, thinking]);
 
   const startNewChat = useCallback(() => {
     setMessages([]);
@@ -258,6 +259,13 @@ export default function ChatSession() {
     streamingMessageRef.current = null;
     setStatus("connected");
     inputRef.current?.focus();
+  }, []);
+
+  const stopExecution = useCallback(() => {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: "stop" }));
+    setStatus("connected");
+    streamingMessageRef.current = null;
   }, []);
 
   const changeCwd = useCallback((newCwd: string) => {
@@ -292,11 +300,11 @@ export default function ChatSession() {
   const isReady = status === "connected" || status === "streaming";
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-950">
       {/* Status bar */}
-      <div className="flex items-center gap-2 px-4 py-1.5 bg-white border-b border-gray-200 text-xs">
+      <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-900 border-b border-gray-700 text-xs">
         <StatusDot status={status} />
-        <span className="text-gray-500">
+        <span className="text-gray-400">
           {status === "disconnected" && "Disconnected"}
           {status === "connecting" && "Connecting..."}
           {status === "connected" && (currentModel ? formatModel(currentModel) : "Ready")}
@@ -304,29 +312,44 @@ export default function ChatSession() {
         </span>
 
         {/* Working directory */}
-        {cwd && (
-          <button
-            onClick={() => setShowDirPicker(!showDirPicker)}
-            className="ml-2 flex items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors font-mono text-[11px] bg-gray-50 px-2 py-0.5 rounded-md border border-gray-200 hover:border-gray-300"
-            title="Change working directory"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
-            {shortenPath(cwd)}
-          </button>
-        )}
+        <button
+          onClick={() => setShowDirPicker(!showDirPicker)}
+          className="ml-2 flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors font-mono text-[11px] bg-gray-800 px-2 py-0.5 rounded-md border border-gray-600 hover:border-gray-500"
+          title="Change working directory"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          {cwd ? shortenPath(cwd) : "Select directory"}
+        </button>
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Thinking toggle */}
+          <button
+            onClick={() => setThinking(!thinking)}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors border ${
+              thinking
+                ? "bg-purple-900/50 text-purple-300 border-purple-600"
+                : "bg-gray-800 text-gray-500 border-gray-600 hover:text-gray-300 hover:border-gray-500"
+            }`}
+            title={thinking ? "Thinking enabled" : "Thinking disabled"}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z" />
+              <path d="M9 22h6" />
+            </svg>
+            Think
+          </button>
+
           {sessionId && (
-            <span className="text-gray-400 font-mono text-[10px]">
+            <span className="text-gray-500 font-mono text-[10px]">
               {sessionId.slice(0, 8)}
             </span>
           )}
           {messages.length > 0 && (
             <button
               onClick={startNewChat}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-500 hover:text-gray-300 transition-colors"
               title="New chat"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -361,7 +384,7 @@ export default function ChatSession() {
       </div>
 
       {/* Input area */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3">
+      <div className="bg-gray-900 border-t border-gray-700 px-4 py-3">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
@@ -372,21 +395,33 @@ export default function ChatSession() {
                 onKeyDown={handleKeyDown}
                 placeholder={isReady ? "Message Claude..." : "Connecting..."}
                 rows={1}
-                className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent focus:bg-white transition-colors placeholder:text-gray-400"
-                disabled={!isReady || status === "streaming"}
+                className="w-full resize-none rounded-xl border border-gray-600 bg-gray-800 px-4 py-2.5 pr-12 text-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors placeholder:text-gray-500"
+                disabled={!isReady}
               />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || status === "streaming" || !isReady}
-                className="absolute right-2 bottom-1.5 rounded-lg bg-emerald-600 text-white p-1.5 hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/25"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
+              {status === "streaming" ? (
+                <button
+                  onClick={stopExecution}
+                  className="absolute right-2 bottom-1.5 rounded-lg bg-red-600 text-white p-1.5 hover:bg-red-700 transition-all shadow-sm shadow-red-500/25"
+                  title="Stop"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="1" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={sendMessage}
+                  disabled={!input.trim() || !isReady}
+                  className="absolute right-2 bottom-1.5 rounded-lg bg-emerald-600 text-white p-1.5 hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/25"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
-          <div className="mt-1.5 text-[10px] text-gray-400 text-center">
+          <div className="mt-1.5 text-[10px] text-gray-500 text-center">
             Enter to send, Shift+Enter for new line
           </div>
         </div>
@@ -402,13 +437,13 @@ export default function ChatSession() {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-4">
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-blue-100 flex items-center justify-center mb-4">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-600">
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-900 to-blue-900 flex items-center justify-center mb-4">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">Chat with Claude</h2>
-      <p className="text-sm text-gray-500 max-w-sm">
+      <h2 className="text-lg font-semibold text-gray-100 mb-1">Chat with Claude</h2>
+      <p className="text-sm text-gray-400 max-w-sm">
         Ask questions, write code, explore ideas. Powered by your Claude Max subscription.
       </p>
     </div>
@@ -441,10 +476,10 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
       <div className={`${isUser ? "max-w-lg" : "max-w-full w-full"}`}>
         {/* Message content */}
         <div
-          className={`rounded-2xl px-4 py-3 text-sm ${
+          className={`rounded-2xl px-4 py-3 text-base ${
             isUser
-              ? "bg-emerald-600 text-white rounded-br-md"
-              : "bg-white border border-gray-200 text-gray-800 shadow-sm rounded-bl-md"
+              ? "bg-emerald-900/50 text-emerald-100 border border-emerald-700/50 rounded-br-md"
+              : "bg-gray-800 border border-gray-700 text-gray-100 rounded-bl-md"
           }`}
         >
           {isUser ? (
@@ -474,7 +509,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
 
         {/* Metadata below the bubble */}
         {!isUser && message.cost !== undefined && (
-          <div className="mt-1 px-1 flex items-center gap-2 text-[11px] text-gray-400">
+          <div className="mt-1 px-1 flex items-center gap-2 text-[11px] text-gray-500">
             <span>${message.cost.toFixed(4)}</span>
             {message.duration && (
               <span>{(message.duration / 1000).toFixed(1)}s</span>
@@ -493,9 +528,9 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 py-1">
-      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-      <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:0ms]" />
+      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:150ms]" />
+      <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce [animation-delay:300ms]" />
     </div>
   );
 }
@@ -511,34 +546,34 @@ function ToolUseCard({ tool }: { tool: ToolUse }) {
   const summary = getToolSummary(tool);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 text-gray-700 overflow-hidden text-xs">
+    <div className="rounded-lg border border-gray-600 bg-gray-700/50 text-gray-300 overflow-hidden text-xs">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-700 transition-colors"
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tool.isComplete ? "bg-emerald-400" : "bg-yellow-400 animate-pulse"}`} />
-        <span className="font-semibold text-gray-600">{displayName}</span>
-        <span className="text-gray-400 truncate flex-1 text-left font-mono">{summary}</span>
+        <span className="font-semibold text-gray-300">{displayName}</span>
+        <span className="text-gray-500 truncate flex-1 text-left font-mono">{summary}</span>
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          className={`text-gray-400 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
+          className={`text-gray-500 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`}
         >
           <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {expanded && (
-        <div className="border-t border-gray-200 px-3 py-2 space-y-2">
+        <div className="border-t border-gray-600 px-3 py-2 space-y-2">
           <div>
-            <span className="font-semibold text-gray-500">Input</span>
-            <pre className="mt-1 bg-white rounded-md border border-gray-200 p-2 overflow-x-auto text-[11px] max-h-40 overflow-y-auto">
+            <span className="font-semibold text-gray-400">Input</span>
+            <pre className="mt-1 bg-gray-800 rounded-md border border-gray-600 p-2 overflow-x-auto text-[11px] max-h-40 overflow-y-auto text-gray-300">
               {JSON.stringify(tool.input, null, 2)}
             </pre>
           </div>
           {tool.result && (
             <div>
-              <span className="font-semibold text-gray-500">Result</span>
-              <pre className="mt-1 bg-white rounded-md border border-gray-200 p-2 overflow-x-auto text-[11px] max-h-60 overflow-y-auto">
+              <span className="font-semibold text-gray-400">Result</span>
+              <pre className="mt-1 bg-gray-800 rounded-md border border-gray-600 p-2 overflow-x-auto text-[11px] max-h-60 overflow-y-auto text-gray-300">
                 {tool.result.length > 2000 ? tool.result.slice(0, 2000) + "\n..." : tool.result}
               </pre>
             </div>
@@ -574,10 +609,10 @@ function DirectoryPicker({
   onSelect: (path: string) => void;
   onClose: () => void;
 }) {
-  const [browsePath, setBrowsePath] = useState(currentPath);
+  const [browsePath, setBrowsePath] = useState(currentPath || "");
   const [dirs, setDirs] = useState<{ name: string; path: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [customPath, setCustomPath] = useState(currentPath);
+  const [customPath, setCustomPath] = useState(currentPath || "");
 
   useEffect(() => {
     loadDirs(browsePath);
@@ -586,9 +621,17 @@ function DirectoryPicker({
   async function loadDirs(path: string) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/directories?path=${encodeURIComponent(path)}`);
+      const url = path
+        ? `/api/directories?path=${encodeURIComponent(path)}`
+        : `/api/directories`;
+      const res = await fetch(url);
       const data = await res.json();
       setDirs(data.dirs || []);
+      // If we had no path, update to the resolved path from the API
+      if (!path && data.path) {
+        setBrowsePath(data.path);
+        setCustomPath(data.path);
+      }
     } catch {
       setDirs([]);
     }
@@ -602,7 +645,7 @@ function DirectoryPicker({
   }
 
   return (
-    <div className="bg-white border-b border-gray-200 shadow-sm">
+    <div className="bg-gray-900 border-b border-gray-700 shadow-sm">
       <div className="max-w-3xl mx-auto px-4 py-3">
         {/* Path input + Use button */}
         <div className="flex items-center gap-2 mb-2">
@@ -615,7 +658,7 @@ function DirectoryPicker({
                 onSelect(customPath);
               }
             }}
-            className="flex-1 font-mono text-xs bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+            className="flex-1 font-mono text-xs bg-gray-800 border border-gray-600 rounded-md px-3 py-1.5 text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             placeholder="Enter path..."
           />
           <button
@@ -626,7 +669,7 @@ function DirectoryPicker({
           </button>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1"
+            className="text-gray-500 hover:text-gray-300 p-1"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -635,8 +678,8 @@ function DirectoryPicker({
         </div>
 
         {/* Breadcrumb + up button */}
-        <div className="flex items-center gap-1 mb-2 text-xs text-gray-500">
-          <button onClick={goUp} className="hover:text-gray-700 p-0.5" title="Go up">
+        <div className="flex items-center gap-1 mb-2 text-xs text-gray-400">
+          <button onClick={goUp} className="hover:text-gray-200 p-0.5" title="Go up">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
@@ -645,11 +688,11 @@ function DirectoryPicker({
         </div>
 
         {/* Directory list */}
-        <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100">
+        <div className="max-h-48 overflow-y-auto border border-gray-600 rounded-md divide-y divide-gray-700">
           {loading ? (
-            <div className="px-3 py-2 text-xs text-gray-400">Loading...</div>
+            <div className="px-3 py-2 text-xs text-gray-500">Loading...</div>
           ) : dirs.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-gray-400">No subdirectories</div>
+            <div className="px-3 py-2 text-xs text-gray-500">No subdirectories</div>
           ) : (
             dirs.map((dir) => (
               <div key={dir.path} className="flex items-center text-xs">
@@ -658,16 +701,16 @@ function DirectoryPicker({
                     setBrowsePath(dir.path);
                     setCustomPath(dir.path);
                   }}
-                  className="flex-1 text-left px-3 py-1.5 hover:bg-gray-50 transition-colors flex items-center gap-2 text-gray-700"
+                  className="flex-1 text-left px-3 py-1.5 hover:bg-gray-800 transition-colors flex items-center gap-2 text-gray-300"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400 flex-shrink-0">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-500 flex-shrink-0">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {dir.name}
                 </button>
                 <button
                   onClick={() => onSelect(dir.path)}
-                  className="px-2 py-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors font-medium"
+                  className="px-2 py-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 transition-colors font-medium"
                 >
                   Select
                 </button>

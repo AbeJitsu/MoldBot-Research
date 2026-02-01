@@ -52,6 +52,8 @@
 | `/api/automations` | GET | List all automations | Built |
 | `/api/automations/[name]` | GET/POST | Read/trigger automation | Built |
 | `/api/health` | GET | Server uptime and status | Built |
+| `/api/tasks` | GET/POST | List/create tasks | Built |
+| `/api/tasks/[id]` | PUT/DELETE | Update/delete task | Built |
 
 ## Design System
 
