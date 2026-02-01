@@ -69,6 +69,9 @@
 - **Build passes** — `next build` clean, dev server runs on localhost:3000, all APIs tested
 - **Task-to-chat action** — "chat" button on tasks sends title + description to Claude as a message
 - **Keyboard shortcuts overlay** — Cmd+/ toggles grouped shortcut reference panel, also linked from input footer
+- **Working directory persistence** — Working directory selection saved to localStorage, restored on page reload
+- **Automation execution** — POST /api/automations/{name} queues prompts for execution via WebSocket; scheduled curl triggers work end-to-end
+- **Responsive task polling** — Task list polls every 1s for snappy feedback when auto-eval creates tasks
 
 ### What's Left
 - **Polish** — Design system refinements
