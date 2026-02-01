@@ -207,12 +207,12 @@ app.prepare().then(() => {
 
     serverAutoEvalProcess = proc;
 
-    // Safety timeout — kill if eval runs longer than 10 minutes
-    const AUTO_EVAL_TIMEOUT = 10 * 60 * 1000;
+    // Safety timeout — kill if eval runs longer than 30 minutes
+    const AUTO_EVAL_TIMEOUT = 30 * 60 * 1000;
     const evalTimeout = setTimeout(() => {
       if (proc && !proc.killed) {
-        console.error("[auto-eval] Timeout after 10 minutes — killing process");
-        broadcastToChat({ type: "error", message: "Auto-eval timed out after 10 minutes" });
+        console.error("[auto-eval] Timeout after 30 minutes — killing process");
+        broadcastToChat({ type: "error", message: "Auto-eval timed out after 30 minutes" });
         proc.kill("SIGTERM");
       }
     }, AUTO_EVAL_TIMEOUT);
