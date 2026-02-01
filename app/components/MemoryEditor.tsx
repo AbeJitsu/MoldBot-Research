@@ -111,6 +111,15 @@ export default function MemoryEditor() {
           </h2>
         </div>
         <nav className="py-2">
+          {files.length === 0 && (
+            <div className="px-4 py-8 text-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 mx-auto mb-2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <p className="text-xs text-gray-600">No memory files found</p>
+              <p className="text-xs text-gray-700 mt-1" style={{ fontFamily: 'var(--font-mono)' }}>Add files to memory/</p>
+            </div>
+          )}
           {Object.entries(grouped).map(([dir, dirFiles]) => (
             <div key={dir}>
               {dir !== "root" && (

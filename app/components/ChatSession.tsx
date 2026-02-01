@@ -1174,7 +1174,7 @@ export default function ChatSession() {
       </div>
 
       {/* Scroll to bottom button */}
-      {scrolledUp && status === "streaming" && (
+      {scrolledUp && messages.length > 0 && (
         <div className="flex justify-center py-1">
           <button
             onClick={() => {
@@ -1565,6 +1565,8 @@ function ToolUseCard({ tool }: { tool: ToolUse }) {
     >
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-label={`${displayName}${summary ? `: ${summary}` : ""} — ${tool.isComplete ? "completed" : "in progress"}`}
         className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.03] transition-colors duration-150"
       >
         {tool.isComplete ? (
