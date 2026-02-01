@@ -3,20 +3,20 @@
 ## Current Project
 - **Project:** Bridgette (Native Claude Code Dashboard)
 - **Path:** ~/Projects/Personal/OpenClaw Research
-- **Branch:** main
-- **Status:** Core features complete, polish remaining
+- **Branch:** dev (all work happens here, merged to main when stable)
+- **Status:** Core features complete, polish phase
 
-## What's Done
-- Memory system merged and populated
-- Terminal core (PTY + WebSocket + xterm.js)
-- Memory editor with file sidebar and Cmd+S save
-- Automations panel with prompt templates
-- All API routes (memory, automations, health)
-- launchd plists for scheduled triggers
+## What's Done (Recent)
+- Chat UI with streaming, tool cards, markdown, cost tracking, session resume
+- Three-panel task management layout
+- Five-tab dashboard: Chat, Memory, Automations, Eval Logs, Status
+- Auto-iteration system with four-eval rotation
+- Backend hardening: process lifecycle, memory API security, race conditions
+- Status tab: server health, git info, memory timestamps, eval config, launchd jobs
+- Chat UI polish: click-outside dropdowns, table styles, tool card states
 
 ## Next Steps
-- Log viewer for automation run history
-- Status page (launchd jobs, server health)
-- Working directory selector for terminal
-- New session button
-- Design polish
+- Responsive layout refinements
+- Error states and reconnection UX
+- File diff viewer for edit tool results
+- Code syntax highlighting in markdown

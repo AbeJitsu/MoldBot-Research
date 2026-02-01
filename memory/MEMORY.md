@@ -11,9 +11,10 @@
 ## Technical Learnings
 
 - LaunchAgent daemons cannot access macOS Keychain — must run in interactive terminal session
-- `claude -p` needs `< /dev/null` to prevent hanging on stdin in non-interactive mode
-- VS Code can use 30+ GB RAM, causing macOS to SIGKILL `claude -p`
-- `PI_BASH_YIELD_MS=120000` needed for OpenClaw to not background long commands (no longer needed with native approach)
+- `claude --print` hangs when stdin is a pipe — must use `stdio: ['ignore', 'pipe', 'pipe']`
+- `--include-partial-messages` gives real-time `content_block_delta` events for streaming UI
+- Child processes from `child_process.spawn` need explicit cleanup on server restart to avoid leaks
+- Memory API needs path traversal guards — `realpath` check against memory directory
 
 ## About Abe
 

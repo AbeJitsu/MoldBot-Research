@@ -136,7 +136,8 @@ OpenClaw Research/
 │   │   ├── TaskPanel.tsx    ← left/right task sidebars
 │   │   ├── MemoryEditor.tsx
 │   │   ├── Automations.tsx
-│   │   └── EvalLogs.tsx
+│   │   ├── EvalLogs.tsx
+│   │   └── Status.tsx
 │   ├── app/
 │   │   ├── page.tsx         ← dashboard (three-panel + tabs)
 │   │   └── api/             ← REST endpoints
@@ -144,7 +145,7 @@ OpenClaw Research/
 │   ├── vitest.config.ts
 │   └── package.json
 ├── automations/             ← prompt templates
-│   └── auto-eval/           ← rotation prompts (frontend/backend/functionality)
+│   └── auto-eval/           ← rotation prompts (frontend/backend/functionality/memory-curator)
 ├── launchd/                 ← scheduling plists
 └── roadmap.md               ← this file
 ```
