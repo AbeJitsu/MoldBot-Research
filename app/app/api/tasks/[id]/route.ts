@@ -29,7 +29,12 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const tasks = readTasks();
   const index = tasks.findIndex((t) => t.id === id);
 
@@ -37,17 +42,19 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (body.title) tasks[index].title = body.title;
+  if (typeof body.title === "string" && body.title.trim()) {
+    tasks[index].title = body.title.trim();
+  }
 
   const VALID_STATUSES: Task["status"][] = ["pending", "needs_testing", "completed"];
   if (body.status) {
-    if (!VALID_STATUSES.includes(body.status)) {
+    if (!VALID_STATUSES.includes(body.status as Task["status"])) {
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}` },
         { status: 400 }
       );
     }
-    tasks[index].status = body.status;
+    tasks[index].status = body.status as Task["status"];
   }
 
   writeTasks(tasks);
