@@ -18,6 +18,7 @@ export default function MemoryEditor() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
+  const [fileFilter, setFileFilter] = useState("");
 
   // Load file list
   useEffect(() => {
@@ -82,8 +83,12 @@ export default function MemoryEditor() {
 
   const hasChanges = content !== originalContent;
 
-  // Group files by directory
-  const grouped = files.reduce<Record<string, MemoryFile[]>>((acc, file) => {
+  // Filter and group files by directory
+  const filteredFiles = fileFilter.trim()
+    ? files.filter((f) => f.name.toLowerCase().includes(fileFilter.toLowerCase()) || f.path.toLowerCase().includes(fileFilter.toLowerCase()))
+    : files;
+
+  const grouped = filteredFiles.reduce<Record<string, MemoryFile[]>>((acc, file) => {
     const dir = file.path.includes("/") ? file.path.split("/")[0] : "root";
     if (!acc[dir]) acc[dir] = [];
     acc[dir].push(file);
@@ -105,13 +110,30 @@ export default function MemoryEditor() {
     <div className="flex h-full">
       {/* Sidebar — file list */}
       <div className="w-64 border-r border-white/[0.06] overflow-y-auto" style={{ background: 'var(--surface-1)' }}>
-        <div className="px-4 py-3 border-b border-white/[0.06]">
+        <div className="px-4 py-3 border-b border-white/[0.06] space-y-2">
           <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest" style={{ fontFamily: 'var(--font-mono)' }}>
             Memory Files
           </h2>
+          {files.length > 3 && (
+            <input
+              type="text"
+              value={fileFilter}
+              onChange={(e) => setFileFilter(e.target.value)}
+              placeholder="Filter files..."
+              className="w-full text-xs border border-white/[0.08] rounded-md px-2.5 py-1.5 text-gray-200 focus:outline-none focus:border-emerald-500/40 transition-all duration-200 placeholder:text-gray-600"
+              style={{ background: 'var(--surface-2)', fontFamily: 'var(--font-mono)' }}
+              aria-label="Filter memory files"
+            />
+          )}
         </div>
         <nav className="py-2">
-          {files.length === 0 && (
+          {fileFilter && filteredFiles.length === 0 && (
+            <div className="px-4 py-6 text-center">
+              <p className="text-xs text-gray-600">No files matching &ldquo;{fileFilter}&rdquo;</p>
+              <button onClick={() => setFileFilter("")} className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 transition-colors">Clear filter</button>
+            </div>
+          )}
+          {files.length === 0 && !fileFilter && (
             <div className="px-4 py-8 text-center">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 mx-auto mb-2">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />

@@ -1304,13 +1304,16 @@ export default function ChatSession() {
 // ============================================
 
 function EmptyState() {
-  const shortcuts = [
-    { keys: "Enter", desc: "Send message" },
-    { keys: "Shift+Enter", desc: "New line" },
-    { keys: "Esc", desc: "Stop response" },
-    { keys: "\u2318K", desc: "New chat" },
-    { keys: "\u2318F", desc: "Search" },
+  const suggestions = [
+    { label: "Review pending tasks", prompt: "Check the pending tasks and help me prioritize what to work on next.", icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" },
+    { label: "Run the build", prompt: "Run the build and fix any errors.", icon: "M13 2L3 14h9l-1 8 10-12h-9l1-8" },
+    { label: "Explain this codebase", prompt: "Give me a high-level overview of this project's architecture and key files.", icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6" },
+    { label: "Find and fix bugs", prompt: "Look through the codebase for potential bugs, type errors, or issues and fix them.", icon: "M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z" },
   ];
+
+  function handleSuggestion(prompt: string) {
+    window.dispatchEvent(new CustomEvent("bridgette-send-to-chat", { detail: prompt }));
+  }
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-4">
@@ -1325,13 +1328,36 @@ function EmptyState() {
       <h2 className="text-lg font-semibold text-gray-200 mb-2 tracking-tight">
         Chat with Claude
       </h2>
-      <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-6">
+      <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-8">
         Ask questions, write code, explore ideas. Powered by your Claude Max subscription.
       </p>
 
+      {/* Quick action suggestions */}
+      <div className="grid grid-cols-2 gap-2.5 max-w-md w-full mb-8">
+        {suggestions.map((s) => (
+          <button
+            key={s.label}
+            onClick={() => handleSuggestion(s.prompt)}
+            className="group flex items-start gap-2.5 text-left px-3.5 py-3 rounded-xl border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04] transition-all duration-200"
+            style={{ background: "var(--surface-2)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 group-hover:text-emerald-400 transition-colors duration-200 mt-0.5 flex-shrink-0">
+              <path d={s.icon} />
+            </svg>
+            <span className="text-[13px] text-gray-400 group-hover:text-gray-300 transition-colors duration-200 leading-snug">{s.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* Keyboard shortcuts */}
       <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 max-w-md">
-        {shortcuts.map((s) => (
+        {[
+          { keys: "Enter", desc: "Send" },
+          { keys: "Shift+Enter", desc: "New line" },
+          { keys: "Esc", desc: "Stop" },
+          { keys: "\u2318K", desc: "New chat" },
+          { keys: "\u2318F", desc: "Search" },
+        ].map((s) => (
           <div key={s.keys} className="flex items-center gap-1.5 text-xs text-gray-600">
             <kbd
               className="px-1.5 py-0.5 rounded border border-white/[0.08] text-gray-400"

@@ -66,6 +66,37 @@ export default function EvalLogs() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4">
+      {/* Summary stats */}
+      {logs.length > 0 && (() => {
+        const successCount = logs.filter((l) => l.status === "success").length;
+        const errorCount = logs.filter((l) => l.status === "error").length;
+        const timeoutCount = logs.filter((l) => l.status === "timeout").length;
+        const lastRun = logs.length > 0 ? logs[logs.length - 1] : null;
+        return (
+          <div className="flex items-center gap-3 mb-4 p-3 rounded-xl border border-white/[0.06]" style={{ background: "var(--surface-1)" }}>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs text-gray-400" style={{ fontFamily: "var(--font-mono)" }}>{successCount} passed</span>
+            </div>
+            {errorCount > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                <span className="text-xs text-gray-400" style={{ fontFamily: "var(--font-mono)" }}>{errorCount} failed</span>
+              </div>
+            )}
+            {timeoutCount > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className="text-xs text-gray-400" style={{ fontFamily: "var(--font-mono)" }}>{timeoutCount} timeout</span>
+              </div>
+            )}
+            <span className="ml-auto text-xs text-gray-600" style={{ fontFamily: "var(--font-mono)" }}>
+              {lastRun ? `Last: ${formatRelativeTime(lastRun.timestamp)}` : ""}
+            </span>
+          </div>
+        );
+      })()}
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-100">Eval Logs</h2>
