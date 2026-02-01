@@ -143,6 +143,9 @@ export default function ChatSession() {
   const [evalChaining, setEvalChaining] = useState(false);
   const [countdown, setCountdown] = useState<string | null>(null);
   const [needsToken, setNeedsToken] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -565,7 +568,13 @@ export default function ChatSession() {
   }, []);
 
   const resumeSession = useCallback((entry: SessionEntry) => {
-    setMessages([]);
+    // Show a context message so the user knows which session was resumed
+    const resumeMsg: ChatMessage = {
+      id: "resume-" + entry.sessionId,
+      role: "assistant",
+      content: `**Resumed session** \`${entry.sessionId.slice(0, 8)}\`\n\n> ${entry.firstMessage}${entry.model ? `\n\nModel: ${formatModel(entry.model)}` : ""}`,
+    };
+    setMessages([resumeMsg]);
     setSessionId(entry.sessionId);
     streamingMessageRef.current = null;
     setStatus("connected");
@@ -584,20 +593,30 @@ export default function ChatSession() {
     streamingMessageRef.current = null;
   }, []);
 
-  // Keyboard shortcuts: Escape to stop, Cmd+K to clear
+  // Keyboard shortcuts: Escape to stop, Cmd+K to clear, Cmd+F to search
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && status === "streaming") {
         stopExecution();
       }
+      if (e.key === "Escape" && showSearch) {
+        setShowSearch(false);
+        setSearchQuery("");
+        inputRef.current?.focus();
+      }
       if (e.key === "k" && (e.metaKey || e.ctrlKey) && status !== "streaming") {
         e.preventDefault();
         startNewChat();
       }
+      if (e.key === "f" && (e.metaKey || e.ctrlKey) && messages.length > 0) {
+        e.preventDefault();
+        setShowSearch(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [status, stopExecution, startNewChat]);
+  }, [status, stopExecution, startNewChat, showSearch, messages.length]);
 
   const changeCwd = useCallback((newCwd: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -852,7 +871,12 @@ export default function ChatSession() {
                   <div className="flex items-center gap-1.5">
                     {sessions.length > 0 && (
                       <button
-                        onClick={() => { clearAllSessions(); setSessions([]); }}
+                        onClick={() => {
+                          if (window.confirm(`Clear all ${sessions.length} saved sessions? This cannot be undone.`)) {
+                            clearAllSessions();
+                            setSessions([]);
+                          }
+                        }}
                         className="text-xs text-gray-600 hover:text-red-400 transition-colors"
                         title="Clear all sessions"
                         style={{ fontFamily: 'var(--font-mono)' }}
@@ -1047,15 +1071,53 @@ export default function ChatSession() {
         </div>
       )}
 
+      {/* Search bar */}
+      {showSearch && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.06]" style={{ background: 'var(--surface-1)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500 flex-shrink-0">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search messages..."
+            className="flex-1 text-sm border-none bg-transparent text-gray-200 focus:outline-none placeholder:text-gray-600"
+            style={{ fontFamily: 'var(--font-sans)' }}
+          />
+          {searchQuery && (
+            <span className="text-xs text-gray-500" style={{ fontFamily: 'var(--font-mono)' }}>
+              {messages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase())).length} matches
+            </span>
+          )}
+          <button
+            onClick={() => { setShowSearch(false); setSearchQuery(""); inputRef.current?.focus(); }}
+            className="text-gray-500 hover:text-gray-300 p-0.5 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} isStreaming={status === "streaming" && msg === messages[messages.length - 1] && msg.role === "assistant"} />
-            ))}
+            {(() => {
+              const query = searchQuery.toLowerCase().trim();
+              const filtered = query
+                ? messages.filter((m) => m.content.toLowerCase().includes(query) || m.toolUses?.some((t) => t.name.toLowerCase().includes(query) || t.result?.toLowerCase().includes(query)))
+                : messages;
+              return filtered.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} isStreaming={status === "streaming" && msg === messages[messages.length - 1] && msg.role === "assistant"} searchQuery={searchQuery} />
+              ));
+            })()}
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -1099,7 +1161,7 @@ export default function ChatSession() {
               )}
           </div>
           <div className="mt-2 text-xs text-gray-600 text-center" style={{ fontFamily: 'var(--font-mono)' }}>
-            Enter to send · Shift+Enter for new line · Esc to stop · {"\u2318"}K new chat
+            Enter to send · Shift+Enter for new line · Esc to stop · {"\u2318"}K new chat · {"\u2318"}F search
           </div>
         </div>
       </div>
@@ -1117,6 +1179,7 @@ function EmptyState() {
     { keys: "Shift+Enter", desc: "New line" },
     { keys: "Esc", desc: "Stop response" },
     { keys: "\u2318K", desc: "New chat" },
+    { keys: "\u2318F", desc: "Search" },
   ];
 
   return (
@@ -1180,7 +1243,7 @@ function StatusDot({ status }: { status: ConnectionStatus }) {
 // MESSAGE BUBBLE
 // ============================================
 
-function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStreaming?: boolean }) {
+function MessageBubble({ message, isStreaming, searchQuery }: { message: ChatMessage; isStreaming?: boolean; searchQuery?: string }) {
   const isUser = message.role === "user";
   const isInterrupted = !isUser && interruptedMessageIds.has(message.id);
 
@@ -1199,7 +1262,7 @@ function MessageBubble({ message, isStreaming }: { message: ChatMessage; isStrea
           style={!isUser ? { background: 'var(--surface-2)' } : undefined}
         >
           {isUser ? (
-            <div className="whitespace-pre-wrap break-words">{message.content}</div>
+            <div className="whitespace-pre-wrap break-words">{searchQuery ? highlightText(message.content, searchQuery) : message.content}</div>
           ) : (
             <>
               {message.content && (
@@ -1455,6 +1518,19 @@ function ToolUseCard({ tool }: { tool: ToolUse }) {
 // ============================================
 // HELPERS
 // ============================================
+
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <mark key={i} className="bg-amber-400/30 text-inherit rounded-sm px-0.5">{part}</mark>
+    ) : (
+      part
+    )
+  );
+}
 
 function shortenPath(path: string): string {
   const home = "/Users/" + (path.split("/")[2] || "");
