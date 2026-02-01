@@ -7,7 +7,7 @@ const TASKS_FILE = path.join(process.cwd(), "..", "tasks.json");
 interface Task {
   id: string;
   title: string;
-  status: "pending" | "in_progress" | "completed";
+  status: "pending" | "needs_testing" | "completed";
   createdAt: string;
 }
 

@@ -1,13 +1,14 @@
 # Hooks Folder
 
-Two working hooks. Most Claude Code hook types are broken (Jan 2025).
+Three working hooks for session lifecycle management.
 
 ## Active Hooks
 
 | File | Purpose | Provides feedback to Claude? |
 |------|---------|------------------------------|
-| `session-start.sh` | Shows git branch and uncommitted files | YES - visible at session start |
+| `session-start.sh` | Shows git branch, uncommitted files, and task kanban summary | YES - visible at session start |
 | `pre-compact.sh` | Saves work state before compression | YES - same pattern |
+| `stop-check.sh` | Blocks Claude from stopping if build is failing | YES - forces iteration until passing |
 
 ## What's Broken (Tested)
 
@@ -15,7 +16,6 @@ Two working hooks. Most Claude Code hook types are broken (Jan 2025).
 |-----------|--------|------------|
 | PreToolUse | Doesn't fire | Debug output never appeared |
 | PostToolUse | Doesn't fire | GitHub issues #6403, #6305, #3148 |
-| Stop | Doesn't fire | Log file never created |
 
 ## Rule
 

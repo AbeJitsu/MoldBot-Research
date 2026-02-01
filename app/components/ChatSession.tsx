@@ -37,6 +37,7 @@ export default function ChatSession() {
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentModel, setCurrentModel] = useState<string>("");
+  const [selectedModel, setSelectedModel] = useState<string>("");
   const [cwd, setCwd] = useState<string>("");
   const [showDirPicker, setShowDirPicker] = useState(false);
   const [thinking, setThinking] = useState(false);
@@ -249,9 +250,11 @@ export default function ChatSession() {
     // Reset textarea height
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    wsRef.current.send(JSON.stringify({ type: "message", text, sessionId, thinking }));
+    const payload: Record<string, unknown> = { type: "message", text, sessionId, thinking };
+    if (selectedModel) payload.model = selectedModel;
+    wsRef.current.send(JSON.stringify(payload));
     setStatus("streaming");
-  }, [input, status, sessionId, thinking]);
+  }, [input, status, sessionId, thinking, selectedModel]);
 
   const startNewChat = useCallback(() => {
     setMessages([]);
@@ -267,6 +270,17 @@ export default function ChatSession() {
     setStatus("connected");
     streamingMessageRef.current = null;
   }, []);
+
+  // Escape key to stop streaming
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && status === "streaming") {
+        stopExecution();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [status, stopExecution]);
 
   const changeCwd = useCallback((newCwd: string) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
@@ -324,6 +338,18 @@ export default function ChatSession() {
         </button>
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Model selector */}
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="bg-gray-800 text-gray-300 text-[11px] font-medium border border-gray-600 rounded-md px-1.5 py-0.5 hover:border-gray-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Default</option>
+            <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+            <option value="claude-sonnet-4-20250514">Sonnet 4</option>
+            <option value="claude-haiku-3-5-20241022">Haiku 3.5</option>
+          </select>
+
           {/* Thinking toggle */}
           <button
             onClick={() => setThinking(!thinking)}
@@ -386,8 +412,7 @@ export default function ChatSession() {
       {/* Input area */}
       <div className="bg-gray-900 border-t border-gray-700 px-4 py-3">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
+          <div className="relative">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -401,7 +426,7 @@ export default function ChatSession() {
               {status === "streaming" ? (
                 <button
                   onClick={stopExecution}
-                  className="absolute right-2 bottom-1.5 rounded-lg bg-red-600 text-white p-1.5 hover:bg-red-700 transition-all shadow-sm shadow-red-500/25"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-red-600 text-white p-1.5 hover:bg-red-700 transition-all shadow-sm shadow-red-500/25"
                   title="Stop"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -412,17 +437,16 @@ export default function ChatSession() {
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim() || !isReady}
-                  className="absolute right-2 bottom-1.5 rounded-lg bg-emerald-600 text-white p-1.5 hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/25"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-emerald-600 text-white p-1.5 hover:bg-emerald-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/25"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </button>
               )}
-            </div>
           </div>
           <div className="mt-1.5 text-[10px] text-gray-500 text-center">
-            Enter to send, Shift+Enter for new line
+            Enter to send · Shift+Enter for new line · Esc to stop
           </div>
         </div>
       </div>

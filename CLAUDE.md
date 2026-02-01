@@ -80,6 +80,23 @@ Browser (Terminal)  ←WebSocket /ws/terminal→  server.ts  ←node-pty→  cla
 - When restarting the dev server, always `kill -9` the process on port 3000 first, then wait for port to be free before restarting
 - Task data stored in `tasks.json` at project root (not in `app/`)
 
+## Task Management
+
+`tasks.json` at the project root is the kanban board. Follow these rules:
+
+- **Before starting work:** Read `tasks.json`, create tasks for planned work, move relevant task to `in_progress`
+- **Before building:** Check tasks — any `in_progress` tasks should reflect what you're about to build
+- **Before testing:** Update task status if tests relate to a task
+- **Before documenting:** Check if documentation tasks exist, create if needed
+- **After completing work:** Move task to `completed`
+- **API (if server running):** `curl localhost:3000/api/tasks` to read, POST to create, PUT to update
+- **Direct file edit also fine:** Can read/write `tasks.json` directly if the server isn't running
+
+Task schema:
+```json
+{ "id": "uuid", "title": "...", "status": "pending|needs_testing|completed", "createdAt": "ISO" }
+```
+
 ## Commands
 
 ```bash

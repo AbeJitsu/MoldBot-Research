@@ -27,6 +27,16 @@ cd "$_GIT_ROOT"
 BRANCH=$(git branch --show-current 2>/dev/null)
 UNCOMMITTED=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 
+# Task kanban summary
+TASKS_FILE="$_GIT_ROOT/tasks.json"
+KANBAN=""
+if [[ -f "$TASKS_FILE" ]]; then
+  PENDING=$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(1 for t in d if t.get('status')=='pending'))" "$TASKS_FILE" 2>/dev/null || echo "?")
+  IN_PROGRESS=$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(1 for t in d if t.get('status')=='in_progress'))" "$TASKS_FILE" 2>/dev/null || echo "?")
+  COMPLETED=$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(1 for t in d if t.get('status')=='completed'))" "$TASKS_FILE" 2>/dev/null || echo "?")
+  KANBAN="Kanban: ${PENDING} pending, ${IN_PROGRESS} in progress, ${COMPLETED} completed"
+fi
+
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Branch: $BRANCH"
@@ -34,6 +44,9 @@ if [[ "$UNCOMMITTED" -gt 0 ]]; then
   echo "Uncommitted changes: $UNCOMMITTED files"
 fi
 echo "Memory: $MEMORY_STATUS"
+if [[ -n "$KANBAN" ]]; then
+  echo "$KANBAN"
+fi
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 

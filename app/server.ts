@@ -80,7 +80,7 @@ app.prepare().then(() => {
       try {
         const parsed = JSON.parse(msg.toString());
         if (parsed.type === "message") {
-          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.thinking);
+          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.thinking, parsed.model);
         } else if (parsed.type === "stop") {
           const proc = chatProcesses.get(ws);
           if (proc && !proc.killed) {
@@ -116,7 +116,7 @@ app.prepare().then(() => {
     });
   });
 
-  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, thinking?: boolean) {
+  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, thinking?: boolean, model?: string) {
     // Kill any existing process for this connection
     const existingProc = chatProcesses.get(ws);
     if (existingProc && !existingProc.killed) {
@@ -133,6 +133,11 @@ app.prepare().then(() => {
       "--verbose",
       "--include-partial-messages",
     ];
+
+    // Select model if specified
+    if (model) {
+      args.push("--model", model);
+    }
 
     // Enable thinking if requested
     if (thinking) {

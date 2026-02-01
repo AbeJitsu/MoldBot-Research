@@ -5,12 +5,12 @@ import { useEffect, useState, useCallback } from "react";
 interface Task {
   id: string;
   title: string;
-  status: "pending" | "in_progress" | "completed";
+  status: "pending" | "needs_testing" | "completed";
   createdAt: string;
 }
 
 // ============================================
-// TASK PANEL — Left or Right sidebar
+// TASK PANEL — Left sidebar (Pending)
 // ============================================
 
 export function LeftTaskPanel() {
@@ -63,25 +63,29 @@ export function LeftTaskPanel() {
   );
 }
 
+// ============================================
+// TASK PANEL — Right sidebar (Needs Testing + Completed)
+// ============================================
+
 export function RightTaskPanel() {
   const { tasks, advanceTask, deleteTask } = useTasks();
 
-  const inProgress = tasks.filter((t) => t.status === "in_progress");
+  const needsTesting = tasks.filter((t) => t.status === "needs_testing");
   const completed = tasks.filter((t) => t.status === "completed");
   const [showCompleted, setShowCompleted] = useState(false);
 
   return (
     <div className="flex flex-col h-full bg-gray-900 border-l border-gray-700 w-[250px] flex-shrink-0">
-      {/* In Progress */}
+      {/* Needs Testing */}
       <div className="px-3 py-2 border-b border-gray-700">
-        <h2 className="text-xs uppercase tracking-wide text-gray-400 font-semibold">In Progress</h2>
+        <h2 className="text-xs uppercase tracking-wide text-yellow-400 font-semibold">Needs Testing</h2>
       </div>
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-        {inProgress.map((task) => (
+        {needsTesting.map((task) => (
           <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} />
         ))}
-        {inProgress.length === 0 && (
-          <p className="text-xs text-gray-500 px-2 py-4 text-center">Nothing in progress</p>
+        {needsTesting.length === 0 && (
+          <p className="text-xs text-gray-500 px-2 py-4 text-center">Nothing to test</p>
         )}
       </div>
 
@@ -128,14 +132,20 @@ function TaskItem({
 }) {
   const statusIcon = {
     pending: "text-gray-500",
-    in_progress: "text-blue-400 animate-pulse",
+    needs_testing: "text-yellow-400",
     completed: "text-emerald-400",
   };
 
   const statusSymbol = {
-    pending: "\u25A1",   // empty square
-    in_progress: "\u25CF", // filled circle
-    completed: "\u2713",   // checkmark
+    pending: "\u25A1",       // empty square
+    needs_testing: "\u25CF", // filled circle
+    completed: "\u2713",     // checkmark
+  };
+
+  const advanceTitle = {
+    pending: "Move to Needs Testing",
+    needs_testing: "Mark Completed",
+    completed: "Done",
   };
 
   return (
@@ -143,7 +153,7 @@ function TaskItem({
       <button
         onClick={() => onAdvance(task.id)}
         className={`mt-0.5 text-sm flex-shrink-0 ${statusIcon[task.status]} hover:text-emerald-400 transition-colors`}
-        title={task.status === "pending" ? "Start" : task.status === "in_progress" ? "Complete" : "Done"}
+        title={advanceTitle[task.status]}
       >
         {statusSymbol[task.status]}
       </button>
@@ -217,8 +227,8 @@ function useTasks() {
     if (!task) return;
 
     const nextStatus: Record<string, string> = {
-      pending: "in_progress",
-      in_progress: "completed",
+      pending: "needs_testing",
+      needs_testing: "completed",
       completed: "completed",
     };
     const newStatus = nextStatus[task.status];
