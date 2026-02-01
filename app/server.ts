@@ -164,6 +164,16 @@ app.prepare().then(() => {
 
     serverAutoEvalProcess = proc;
 
+    // Safety timeout — kill if eval runs longer than 10 minutes
+    const AUTO_EVAL_TIMEOUT = 10 * 60 * 1000;
+    const evalTimeout = setTimeout(() => {
+      if (proc && !proc.killed) {
+        console.error("[auto-eval] Timeout after 10 minutes — killing process");
+        broadcastToChat({ type: "error", message: "Auto-eval timed out after 10 minutes" });
+        proc.kill("SIGTERM");
+      }
+    }, AUTO_EVAL_TIMEOUT);
+
     let buffer = "";
 
     proc.stdout?.on("data", (chunk: Buffer) => {
@@ -196,9 +206,10 @@ app.prepare().then(() => {
     });
 
     proc.on("close", () => {
+      clearTimeout(evalTimeout);
       // Flush remaining buffer
       if (buffer.trim()) {
-        broadcastToChat(JSON.parse(buffer.trim()) as Record<string, unknown>);
+        try { broadcastToChat(JSON.parse(buffer.trim()) as Record<string, unknown>); } catch {}
       }
       buffer = "";
       serverAutoEvalProcess = null;
@@ -219,6 +230,7 @@ app.prepare().then(() => {
     });
 
     proc.on("error", (err) => {
+      clearTimeout(evalTimeout);
       console.error(`[auto-eval error] ${err.message}`);
       broadcastToChat({ type: "error", message: err.message });
       serverAutoEvalProcess = null;
