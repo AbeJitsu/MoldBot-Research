@@ -67,6 +67,13 @@
 - **Model switcher** — Opus 4.5, Sonnet 4, Haiku 3.5 with localStorage persistence
 - **Task advance buttons** — Hover to reveal test/done actions on tasks
 - **Escape key + stop button** — Cancel streaming responses
+- **Reconnection UX** — Disconnect banner, retry button, automatic reconnection with backoff
+- **Tool card enhancements** — Copy-to-clipboard buttons on input/result, diff syntax highlighting (green/red/blue)
+- **ARIA accessibility** — Proper tabpanel roles with id/aria-labelledby on all five tabs
+- **Shared formatters** — `lib/format.ts` with formatRelativeTime, formatBytes, formatUptime, formatInterval
+- **TabEmptyState** — Reusable loading/error/empty state component across all tabs
+- **Graceful shutdown** — SIGTERM/SIGINT handler kills all child processes, closes WebSocket connections, 8s forced-exit fallback
+- **Atomic eval-log writes** — Mutex + temp-file-plus-rename prevents corruption from concurrent writes
 - **Stop hook** — TypeScript check + server health verification (no longer kills running server)
 - **Auto-iteration system** — Server-level idle detection (configurable 1min–2hr), four-eval rotation (frontend → backend → functionality → memory curator), merges main into dev before each run, persisted state, headless operation, manual trigger, change summaries
 - **Auto-eval test suite** — Vitest unit tests (rotation math) + integration tests (WebSocket message flow)
@@ -91,8 +98,8 @@
 ### Next Up: Polish & Operations
 - ~~Log viewer for automation run history~~ — **Built** (Eval Logs tab)
 - ~~Status page (launchd jobs, server health, memory timestamps)~~ — **Built** (Status tab)
+- ~~Error states and reconnection UX~~ — **Built** (disconnect banner, retry button, auto-reconnect)
 - Responsive layout refinements
-- Error states and reconnection UX
 
 ### Enhanced Chat UX
 - File diff viewer for edit tool results
@@ -137,11 +144,14 @@ OpenClaw Research/
 │   │   ├── MemoryEditor.tsx
 │   │   ├── Automations.tsx
 │   │   ├── EvalLogs.tsx
-│   │   └── Status.tsx
+│   │   ├── Status.tsx
+│   │   └── TabEmptyState.tsx
 │   ├── app/
 │   │   ├── page.tsx         ← dashboard (three-panel + tabs)
 │   │   └── api/             ← REST endpoints
 │   ├── __tests__/           ← vitest tests
+│   ├── lib/
+│   │   └── format.ts          ← shared formatting utilities
 │   ├── vitest.config.ts
 │   └── package.json
 ├── automations/             ← prompt templates

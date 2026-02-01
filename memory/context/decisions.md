@@ -24,3 +24,8 @@
 - **Decision:** Added auth middleware, path traversal guards, process lifecycle management
 - **Reason:** Memory API was exposed without validation; child processes could leak on crashes
 - **Trade-off:** Slightly more complex API route code
+
+## 2026-02-01: Consolidated formatting utilities
+- **Decision:** Extracted duplicated formatRelativeTime/formatBytes/formatUptime/formatInterval into shared `lib/format.ts`
+- **Reason:** Same formatting logic was copy-pasted across 3+ components (Status, EvalLogs, ChatSession)
+- **Trade-off:** None — pure DRY improvement
