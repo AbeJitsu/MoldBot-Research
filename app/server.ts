@@ -328,6 +328,7 @@ app.prepare().then(() => {
         chatSessions.delete(ws);
         chatCwds.delete(ws);
         chatAlive.delete(ws);
+        rateLimitCounters.delete(ws);
         ws.terminate();
         return;
       }
@@ -432,9 +433,11 @@ app.prepare().then(() => {
     saveEvalIndex((evalIndex + 1) % EVAL_TYPES.length);
 
     // Create pending task for this eval run
+    // The dynamic import is async — store the promise so the close handler can
+    // await it before checking evalTaskId, preventing duplicate task creation.
     let evalTaskId: string | null = null;
     const evalLabel = evalType.charAt(0).toUpperCase() + evalType.slice(1);
-    import("./app/api/tasks/task-store").then(({ createTask }) => {
+    const taskCreationPromise = import("./app/api/tasks/task-store").then(({ createTask }) => {
       return createTask(`[Auto-eval] ${evalLabel} eval running...`, { status: "pending" });
     }).then((task) => {
       evalTaskId = task.id;
@@ -544,7 +547,7 @@ app.prepare().then(() => {
       }
     });
 
-    proc.on("close", (code) => {
+    proc.on("close", async (code) => {
       clearTimeout(evalTimeout);
       // Flush remaining buffer
       if (buffer.trim()) {
@@ -568,6 +571,11 @@ app.prepare().then(() => {
 
       const evalBranch = getGitBranch(cwd);
       const commitHash = getCommitHash(cwd);
+
+      // Wait for task creation to finish before checking evalTaskId — prevents
+      // the race where close fires before the dynamic import resolves, which
+      // would cause evalTaskId to be null and trigger duplicate task creation.
+      await taskCreationPromise;
 
       // Write eval log entry — use exit code to determine real status
       const evalStatus = exitedCleanly ? "success" : "error";

@@ -19,6 +19,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (from === to) {
+    return NextResponse.json(
+      { error: "'from' and 'to' must be different statuses" },
+      { status: 400 }
+    );
+  }
+
   try {
     const count = await advanceAllByStatus(from, to);
     return NextResponse.json({ ok: true, advanced: count });
