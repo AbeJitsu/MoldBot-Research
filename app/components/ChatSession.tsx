@@ -145,26 +145,47 @@ export default function ChatSession() {
   const [needsToken, setNeedsToken] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [scrolledUp, setScrolledUp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const streamingMessageRef = useRef<ChatMessage | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptRef = useRef(0);
   const historyRef = useRef<HTMLDivElement>(null);
   const dirPickerRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
 
   const closeHistory = useCallback(() => { setShowHistory(false); setSessionSearch(""); }, []);
   useClickOutside(historyRef, closeHistory);
   const closeDirPicker = useCallback(() => setShowDirPicker(false), []);
   useClickOutside(dirPickerRef, closeDirPicker);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change (unless user scrolled up)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!userScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  // Detect user scrolling up to pause auto-scroll
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    function handleScroll() {
+      if (!container) return;
+      const threshold = 100;
+      const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+      const isUp = !atBottom;
+      userScrolledUpRef.current = isUp;
+      setScrolledUp(isUp);
+    }
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Persist chat state to sessionStorage so it survives refresh
   useEffect(() => {
@@ -1116,7 +1137,7 @@ export default function ChatSession() {
       )}
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto relative" ref={messagesContainerRef}>
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
@@ -1151,6 +1172,26 @@ export default function ChatSession() {
           </div>
         )}
       </div>
+
+      {/* Scroll to bottom button */}
+      {scrolledUp && status === "streaming" && (
+        <div className="flex justify-center py-1">
+          <button
+            onClick={() => {
+              userScrolledUpRef.current = false;
+              setScrolledUp(false);
+              messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all duration-200 shadow-sm"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+            Scroll to bottom
+          </button>
+        </div>
+      )}
 
       {/* Input area */}
       <div className="px-4 py-3 border-t border-white/[0.06]" style={{ background: 'var(--surface-1)' }}>

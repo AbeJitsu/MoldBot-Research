@@ -210,6 +210,24 @@ export function updateTask(
   });
 }
 
+export function advanceAllByStatus(fromStatus: Task["status"], toStatus: Task["status"]): Promise<number> {
+  return withLock(() => {
+    const tasks = readTasks();
+    let count = 0;
+    for (const task of tasks) {
+      if (task.status === fromStatus) {
+        task.status = toStatus;
+        count++;
+      }
+    }
+    if (count > 0) {
+      writeTasks(tasks);
+      console.log(`[tasks] Advanced ${count} tasks from ${fromStatus} to ${toStatus}`);
+    }
+    return count;
+  });
+}
+
 export function clearCompletedTasks(): Promise<number> {
   return withLock(() => {
     const tasks = readTasks();
