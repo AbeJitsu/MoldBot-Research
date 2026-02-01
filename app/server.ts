@@ -792,11 +792,30 @@ app.prepare().then(() => {
     });
   });
 
+  // Session IDs from claude are UUIDs — reject anything else to prevent CLI argument injection via --resume
+  const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Maximum user message length (100KB) — prevents spawning claude with absurdly large arguments
+  const MAX_MESSAGE_LENGTH = 100 * 1024;
+
   function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, thinking?: boolean, model?: string) {
     // Don't spawn a process if the client already disconnected
     if (ws.readyState !== WebSocket.OPEN) {
       console.log("[ws] Skipping message — client already disconnected");
       return;
+    }
+
+    // Validate message length before spawning a process
+    if (text.length > MAX_MESSAGE_LENGTH) {
+      ws.send(JSON.stringify({ type: "error", message: `Message too long (max ${MAX_MESSAGE_LENGTH} characters)` }));
+      return;
+    }
+
+    // Sanitize sessionId — must be a valid UUID or null
+    // Prevents CLI argument injection via crafted --resume values (e.g. "--model evil")
+    if (sessionId && !SESSION_ID_RE.test(sessionId)) {
+      console.warn(`[ws] Rejected invalid sessionId: ${String(sessionId).slice(0, 50)}`);
+      sessionId = null;
     }
 
     // Kill any existing process for this connection
@@ -816,7 +835,7 @@ app.prepare().then(() => {
       "--include-partial-messages",
     ];
 
-    // Select model if specified
+    // Select model if specified (already validated against ALLOWED_MODELS allowlist)
     if (model) {
       args.push("--model", model);
     }
@@ -832,7 +851,7 @@ app.prepare().then(() => {
       args.push("--append-system-prompt", memoryPrompt);
     }
 
-    // Resume session if we have one
+    // Resume session if we have one (already validated as UUID above)
     if (sessionId) {
       args.push("--resume", sessionId);
     }

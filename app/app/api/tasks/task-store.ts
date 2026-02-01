@@ -38,6 +38,17 @@ function withLock<T>(fn: () => T | Promise<T>): Promise<T> {
 // FILE I/O — atomic writes via temp file + rename
 // ============================================
 
+function tryParseTasksFile(filePath: string): Task[] | null {
+  try {
+    const data = fs.readFileSync(filePath, "utf-8");
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function readTasks(): Task[] {
   // Clean up stale temp file from a previously failed write
   const tmpFile = `${TASKS_FILE}.tmp`;
@@ -50,6 +61,12 @@ function readTasks(): Task[] {
       // File exists but has wrong structure — back up before overwriting
       console.error("[tasks] tasks.json has invalid structure (not an array), backing up");
       try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
+      // Try to recover from the previous backup (from an earlier corruption)
+      const recovered = tryParseTasksFile(`${TASKS_FILE}.backup`);
+      if (recovered) {
+        console.log(`[tasks] Recovered ${recovered.length} tasks from backup`);
+        return recovered;
+      }
       return [];
     }
     return parsed;
@@ -61,15 +78,37 @@ function readTasks(): Task[] {
     // Parse error or other read error — file may be corrupted
     console.error(`[tasks] Failed to read tasks.json: ${err.message}. Backing up corrupt file.`);
     try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
+    // Attempt auto-recovery from backup — prevents data loss on corruption
+    const backupFile = `${TASKS_FILE}.backup`;
+    const recovered = tryParseTasksFile(backupFile);
+    if (recovered) {
+      console.log(`[tasks] Auto-recovered ${recovered.length} tasks from backup`);
+      // Restore the backup as the main file so subsequent reads work
+      try {
+        fs.copyFileSync(backupFile, TASKS_FILE);
+        console.log("[tasks] Restored backup as tasks.json");
+      } catch {}
+      return recovered;
+    }
     return [];
   }
 }
+
+// Track writes to create periodic backups of known-good data
+let writeCount = 0;
+const BACKUP_EVERY_N_WRITES = 10;
 
 function writeTasks(tasks: Task[]): void {
   const tmpFile = `${TASKS_FILE}.tmp`;
   try {
     fs.writeFileSync(tmpFile, JSON.stringify(tasks, null, 2));
     fs.renameSync(tmpFile, TASKS_FILE);
+
+    // Periodically snapshot a known-good backup for recovery
+    writeCount++;
+    if (writeCount % BACKUP_EVERY_N_WRITES === 0) {
+      try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
+    }
   } catch (err) {
     // Clean up temp file if rename failed — original file is still intact
     try { fs.unlinkSync(tmpFile); } catch {}
