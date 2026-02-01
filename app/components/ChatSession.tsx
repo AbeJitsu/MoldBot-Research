@@ -147,6 +147,10 @@ export default function ChatSession() {
   const [showSearch, setShowSearch] = useState(false);
   const [scrolledUp, setScrolledUp] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState<number | null>(null);
+  const [retryMax, setRetryMax] = useState<number | null>(null);
+  const [evalRetryInfo, setEvalRetryInfo] = useState<{ attempt: number; maxAttempts: number; delaySeconds: number } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -382,6 +386,10 @@ export default function ChatSession() {
       if (!event) return;
 
       if (event.type === "message_start") {
+        // Clear retry state — message retry succeeded
+        setRetryCountdown(null);
+        setRetryAttempt(null);
+        setRetryMax(null);
         const newMsg: ChatMessage = {
           id: event.message?.id || crypto.randomUUID(),
           role: "assistant",
@@ -486,6 +494,7 @@ export default function ChatSession() {
       setEvalRunning(true);
       setEvalType(data.evalType || null);
       setEvalTimerStart(null);
+      setEvalRetryInfo(null);
       return;
     }
 
@@ -493,6 +502,7 @@ export default function ChatSession() {
       if (data.branch) setBranch(data.branch);
       setEvalRunning(false);
       setEvalType(null);
+      setEvalRetryInfo(null);
       const evalLabel = data.evalType ? data.evalType.charAt(0).toUpperCase() + data.evalType.slice(1) : "Auto";
       const summaryMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -516,6 +526,31 @@ export default function ChatSession() {
       setAutoEval(!!data.enabled);
       if (data.evalTimerStart !== undefined) setEvalTimerStart(data.evalTimerStart);
       if (data.evalChaining !== undefined) setEvalChaining(!!data.evalChaining);
+      return;
+    }
+
+    if (type === "rate_limit_retry") {
+      setRetryAttempt(data.attempt);
+      setRetryMax(data.maxAttempts);
+      setRetryCountdown(data.delaySeconds);
+      setStatus("connected"); // Not streaming while waiting for retry
+      return;
+    }
+
+    if (type === "retry_countdown") {
+      setRetryCountdown(data.secondsLeft);
+      return;
+    }
+
+    if (type === "retry_cancelled") {
+      setRetryCountdown(null);
+      setRetryAttempt(null);
+      setRetryMax(null);
+      return;
+    }
+
+    if (type === "eval_rate_limit_retry") {
+      setEvalRetryInfo({ attempt: data.attempt, maxAttempts: data.maxAttempts, delaySeconds: data.delaySeconds });
       return;
     }
 
@@ -1109,6 +1144,48 @@ export default function ChatSession() {
             className="px-2.5 py-0.5 rounded border border-amber-500/30 text-amber-300 hover:bg-amber-500/15 transition-colors duration-150 font-medium"
           >
             Retry now
+          </button>
+        </div>
+      )}
+
+      {/* Rate limit retry banner */}
+      {retryCountdown !== null && retryAttempt !== null && (
+        <div className="flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>Rate limited — retrying in {retryCountdown}s (attempt {retryAttempt}/{retryMax})</span>
+          <button
+            onClick={() => {
+              wsRef.current?.send(JSON.stringify({ type: "stop" }));
+              setRetryCountdown(null);
+              setRetryAttempt(null);
+              setRetryMax(null);
+            }}
+            className="px-2.5 py-0.5 rounded border border-amber-500/30 text-amber-300 hover:bg-amber-500/15 transition-colors duration-150 font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Eval rate limit retry banner */}
+      {evalRetryInfo && (
+        <div className="flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>Eval rate limited — retrying in {evalRetryInfo.delaySeconds}s (attempt {evalRetryInfo.attempt}/{evalRetryInfo.maxAttempts})</span>
+          <button
+            onClick={() => {
+              wsRef.current?.send(JSON.stringify({ type: "stop_auto_eval" }));
+              setEvalRetryInfo(null);
+            }}
+            className="px-2.5 py-0.5 rounded border border-amber-500/30 text-amber-300 hover:bg-amber-500/15 transition-colors duration-150 font-medium"
+          >
+            Cancel
           </button>
         </div>
       )}
