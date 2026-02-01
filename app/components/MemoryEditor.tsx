@@ -256,6 +256,20 @@ function LineNumberEditor({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onScroll={syncScroll}
+        onKeyDown={(e) => {
+          if (e.key === "Tab") {
+            e.preventDefault();
+            const textarea = e.currentTarget;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const newValue = value.substring(0, start) + "  " + value.substring(end);
+            onChange(newValue);
+            // Restore cursor position after React re-render
+            requestAnimationFrame(() => {
+              textarea.selectionStart = textarea.selectionEnd = start + 2;
+            });
+          }
+        }}
         className="flex-1 py-4 px-4 font-mono text-sm text-gray-200 resize-none focus:outline-none leading-6"
         style={{ background: "var(--surface-0)", tabSize: 2 }}
         spellCheck={false}

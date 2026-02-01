@@ -697,6 +697,9 @@ export default function ChatSession() {
       <div
         className="flex items-center gap-x-2.5 px-4 py-1.5 border-b border-white/[0.06] text-xs overflow-x-auto scrollbar-none"
         style={{ background: 'var(--surface-1)' }}
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
       >
         <StatusDot status={status} />
         <span className="text-gray-400" style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
@@ -733,12 +736,13 @@ export default function ChatSession() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
-          {cwd ? shortenPath(cwd) : "Select directory"}
+          <span className="hidden sm:inline">{cwd ? shortenPath(cwd) : "Select directory"}</span>
+          <span className="sm:hidden">{cwd ? shortenPath(cwd).split("/").pop() || "Dir" : "Dir"}</span>
         </button>
 
         <div className="ml-auto flex items-center gap-x-2 flex-shrink-0">
           {/* Divider — separates connection/directory from controls */}
-          <span className="w-px h-4 bg-white/[0.08]" aria-hidden="true" />
+          <span className="w-px h-4 bg-white/[0.08] hidden sm:block" aria-hidden="true" />
 
           {/* Model selector */}
           <select
