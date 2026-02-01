@@ -184,14 +184,21 @@ function TaskItem({
         >
           {statusSymbol[task.status]}
         </button>
-        <button
-          onClick={() => task.summary && setShowSummary(!showSummary)}
-          className={`text-[13px] flex-1 leading-snug text-left ${
-            task.status === "completed" ? "text-gray-600 line-through" : "text-gray-300"
-          } ${task.summary ? "cursor-pointer hover:text-gray-400" : ""}`}
-        >
-          {task.title}
-        </button>
+        <div className="flex-1 min-w-0">
+          <button
+            onClick={() => task.summary && setShowSummary(!showSummary)}
+            className={`text-[13px] leading-snug text-left w-full ${
+              task.status === "completed" ? "text-gray-600 line-through" : "text-gray-300"
+            } ${task.summary ? "cursor-pointer hover:text-gray-400" : ""}`}
+          >
+            {task.title}
+          </button>
+          {task.status === "completed" && task.createdAt && (
+            <span className="text-xs text-gray-600 block mt-0.5" style={{ fontFamily: 'var(--font-mono)' }}>
+              {formatEST(task.createdAt)}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-150">
           {task.status !== "completed" && (
             <button
@@ -214,12 +221,14 @@ function TaskItem({
         </div>
       </div>
       {showSummary && task.summary && (
-        <pre
-          className="mt-1.5 ml-5 text-xs text-gray-500 overflow-x-auto max-h-32 overflow-y-auto rounded-md border border-white/[0.06] px-2 py-1.5"
-          style={{ fontFamily: 'var(--font-mono)', background: 'var(--surface-2)' }}
+        <div
+          className="mt-1.5 ml-5 text-xs text-gray-500 overflow-x-auto max-h-40 overflow-y-auto rounded-md border border-white/[0.06] px-2.5 py-2 space-y-1"
+          style={{ background: 'var(--surface-2)' }}
         >
-          {task.summary}
-        </pre>
+          {parseSummaryLines(task.summary).map((line, i) => (
+            <div key={i} className="leading-relaxed" style={{ fontFamily: 'var(--font-mono)' }}>{line}</div>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -342,4 +351,27 @@ function useTasks() {
   }, []);
 
   return { tasks: globalTasks, error: errorMessage, addTask, advanceTask, deleteTask };
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function formatEST(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }) + " EST";
+  } catch {
+    return iso;
+  }
+}
+
+function parseSummaryLines(summary: string): string[] {
+  return summary.split("\n").filter((line) => line.trim());
 }

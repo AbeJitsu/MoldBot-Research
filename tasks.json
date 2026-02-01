@@ -34,5 +34,19 @@
     "title": "Task advance buttons — hover shows test/done buttons",
     "status": "completed",
     "createdAt": "2026-02-01T02:42:55.954Z"
+  },
+  {
+    "id": "fcfd8499-8070-48ff-8f6a-a92699c5f9ad",
+    "title": "[Auto-eval] Backend eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T17:12:30.517Z",
+    "summary": ".auto-eval-index                |   2 +-\n app/app/api/eval-logs/route.ts  |  37 +++++\n app/app/api/tasks/[id]/route.ts |  43 ++++--\n app/app/api/tasks/route.ts      |  32 ++++-\n app/app/api/tasks/task-store.ts |  31 +++-\n app/app/page.tsx                |  33 +++--\n app/components/ChatSession.tsx  |  46 +++---\n app/components/TaskPanel.tsx    |  84 ++++++-----\n app/components/Terminal.tsx     | 135 ------------------\n app/next.config.ts              |   5 +-\n app/server.ts                   | 306 +++++++++++++++++++++-------------------\n eval-log.json                   |   1 +\n 12 files changed, 378 insertions(+), 377 deletions(-)"
+  },
+  {
+    "id": "cb7b1f5c-3970-40ef-9ecd-e681eab45530",
+    "title": "[Auto-eval] Functionality eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T17:30:55.725Z",
+    "summary": ".auto-eval-index               |   2 +-\n app/app/page.tsx               |  38 ++++----\n app/components/ChatSession.tsx | 106 ++++++++++++---------\n app/components/EvalLogs.tsx    | 187 +++++++++++++++++++++++++++++++++++++\n app/components/Terminal.tsx    | 135 ---------------------------\n app/next.config.ts             |   5 +-\n app/server.ts                  | 203 +++++++++++++----------------------------\n eval-log.json                  |  12 ++-\n tasks.json                     |   7 ++\n 9 files changed, 352 insertions(+), 343 deletions(-)"
   }
 ]

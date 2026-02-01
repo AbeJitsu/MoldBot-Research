@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "5ebce83f-5290-48f1-aa1f-44a7e4f95069",
+    "evalType": "backend",
+    "timestamp": "2026-02-01T17:12:30.504Z",
+    "branch": "dev",
+    "commitHash": "f466466f7fabe6d7e9cb818263c143933375e010",
+    "diffSummary": ".auto-eval-index                |   2 +-\n app/app/api/eval-logs/route.ts  |  37 +++++\n app/app/api/tasks/[id]/route.ts |  43 ++++--\n app/app/api/tasks/route.ts      |  32 ++++-\n app/app/api/tasks/task-store.ts |  31 +++-\n app/app/page.tsx                |  33 +++--\n app/components/ChatSession.tsx  |  46 +++---\n app/components/TaskPanel.tsx    |  84 ++++++-----\n app/components/Terminal.tsx     | 135 ------------------\n app/next.config.ts              |   5 +-\n app/server.ts                   | 306 +++++++++++++++++++++-------------------\n eval-log.json                   |   1 +\n 12 files changed, 378 insertions(+), 377 deletions(-)",
+    "status": "success"
+  },
+  {
+    "id": "363c50f4-7d21-4edc-bab1-4c9c83b3be56",
+    "evalType": "functionality",
+    "timestamp": "2026-02-01T17:30:55.713Z",
+    "branch": "dev",
+    "commitHash": "66c49ed20b2a195aaa0d547da548438339b8cfab",
+    "diffSummary": ".auto-eval-index               |   2 +-\n app/app/page.tsx               |  38 ++++----\n app/components/ChatSession.tsx | 106 ++++++++++++---------\n app/components/EvalLogs.tsx    | 187 +++++++++++++++++++++++++++++++++++++\n app/components/Terminal.tsx    | 135 ---------------------------\n app/next.config.ts             |   5 +-\n app/server.ts                  | 203 +++++++++++++----------------------------\n eval-log.json                  |  12 ++-\n tasks.json                     |   7 ++\n 9 files changed, 352 insertions(+), 343 deletions(-)",
+    "status": "success"
+  }
+]

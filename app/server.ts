@@ -3,7 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { spawn, ChildProcess, execSync } from "child_process";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 import crypto from "crypto";
 
@@ -14,15 +14,16 @@ const port = parseInt(process.env.PORT || "3000", 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-// Track active PTY session so browser refresh reconnects
-let activePty: any = null;
-let activeWs: WebSocket | null = null;
-
 // ============================================
 // SERVER-LEVEL AUTO-EVAL STATE
 // ============================================
 
 const autoEvalFile = join(process.cwd(), "..", ".auto-eval-enabled");
+const autoEvalIntervalFile = join(process.cwd(), "..", ".auto-eval-interval");
+
+const DEFAULT_EVAL_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const MIN_EVAL_INTERVAL = 60 * 1000; // 1 minute
+const MAX_EVAL_INTERVAL = 120 * 60 * 1000; // 2 hours
 
 function loadAutoEvalEnabled(): boolean {
   try {
@@ -36,12 +37,25 @@ function saveAutoEvalEnabled(enabled: boolean): void {
   try { writeFileSync(autoEvalFile, String(enabled)); } catch {}
 }
 
+function loadEvalInterval(): number {
+  try {
+    const val = parseInt(readFileSync(autoEvalIntervalFile, "utf-8").trim(), 10);
+    if (!isNaN(val) && val >= MIN_EVAL_INTERVAL && val <= MAX_EVAL_INTERVAL) return val;
+  } catch {}
+  return DEFAULT_EVAL_INTERVAL;
+}
+
+function saveEvalInterval(ms: number): void {
+  try { writeFileSync(autoEvalIntervalFile, String(ms)); } catch {}
+}
+
 let serverAutoEvalEnabled = loadAutoEvalEnabled();
+let serverEvalInterval = loadEvalInterval();
 let serverIdleTimer: NodeJS.Timeout | null = null;
 let serverAutoEvalProcess: ChildProcess | null = null;
 
 // Three-eval rotation system
-const EVAL_TYPES = ["frontend", "backend", "functionality"] as const;
+const EVAL_TYPES = ["frontend", "backend", "functionality", "memory"] as const;
 type EvalType = (typeof EVAL_TYPES)[number];
 const autoEvalIndexFile = join(process.cwd(), "..", ".auto-eval-index");
 
@@ -103,8 +117,19 @@ function getCommitHash(cwd: string): string {
   }
 }
 
-function createEvalTask(evalType: string, summary: string): void {
+function createEvalTask(evalType: string, diffSummary: string): void {
   const url = `http://localhost:${port}/api/tasks`;
+  // Format summary in what/why/how style
+  const fileCount = (diffSummary.match(/\n/g) || []).length;
+  const insertions = diffSummary.match(/(\d+) insertion/)?.[1] || "0";
+  const deletions = diffSummary.match(/(\d+) deletion/)?.[1] || "0";
+  const summary = [
+    `What: ${evalType} improvements across ${fileCount} files`,
+    `Why: Automatic ${evalType} quality pass`,
+    `How: +${insertions} -${deletions} lines changed`,
+    ``,
+    diffSummary,
+  ].join("\n");
   const body = JSON.stringify({
     title: `[Auto-eval] ${evalType.charAt(0).toUpperCase() + evalType.slice(1)} eval completed`,
     status: "completed",
@@ -122,23 +147,71 @@ function createEvalTask(evalType: string, summary: string): void {
   });
 }
 
+// ============================================
+// MEMORY SYSTEM — loads memory/*.md as system prompt
+// ============================================
+
+const MEMORY_DIR = join(process.cwd(), "..", "memory");
+const MEMORY_CACHE_TTL = 60_000; // 60 seconds
+let memoryCache: { content: string; timestamp: number } | null = null;
+
+function collectMdFiles(dir: string): string[] {
+  const results: string[] = [];
+  try {
+    for (const entry of readdirSync(dir)) {
+      const fullPath = join(dir, entry);
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) {
+        results.push(...collectMdFiles(fullPath));
+      } else if (entry.endsWith(".md")) {
+        results.push(fullPath);
+      }
+    }
+  } catch {}
+  return results;
+}
+
+function loadMemoryPrompt(): string {
+  if (memoryCache && Date.now() - memoryCache.timestamp < MEMORY_CACHE_TTL) {
+    return memoryCache.content;
+  }
+
+  if (!existsSync(MEMORY_DIR)) return "";
+
+  const files = collectMdFiles(MEMORY_DIR).sort();
+  if (files.length === 0) return "";
+
+  const sections: string[] = [];
+  for (const filePath of files) {
+    try {
+      const relativeName = filePath.slice(MEMORY_DIR.length + 1);
+      const content = readFileSync(filePath, "utf-8").trim();
+      if (content) {
+        sections.push(`## ${relativeName}\n\n${content}`);
+      }
+    } catch {}
+  }
+
+  const prompt = sections.length > 0
+    ? `# Memory\n\nThe following is your persistent memory — personality, identity, and context:\n\n${sections.join("\n\n---\n\n")}`
+    : "";
+
+  memoryCache = { content: prompt, timestamp: Date.now() };
+  return prompt;
+}
+
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     const parsedUrl = parse(req.url!, true);
     await handle(req, res, parsedUrl);
   });
 
-  const wssTerminal = new WebSocketServer({ noServer: true });
   const wssChat = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (req, socket, head) => {
     const { pathname } = parse(req.url!, true);
 
-    if (pathname === "/ws/terminal") {
-      wssTerminal.handleUpgrade(req, socket, head, (ws) => {
-        wssTerminal.emit("connection", ws, req);
-      });
-    } else if (pathname === "/ws/chat") {
+    if (pathname === "/ws/chat") {
       wssChat.handleUpgrade(req, socket, head, (ws) => {
         wssChat.emit("connection", ws, req);
       });
@@ -156,8 +229,6 @@ app.prepare().then(() => {
   const chatProcesses = new Map<WebSocket, ChildProcess>();
   const chatCwds = new Map<WebSocket, string>();
 
-  const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
-
   // ============================================
   // SERVER-LEVEL IDLE TIMER
   // ============================================
@@ -168,7 +239,8 @@ app.prepare().then(() => {
 
     if (!serverAutoEvalEnabled) return;
 
-    serverIdleTimer = setTimeout(() => triggerServerAutoEval(), IDLE_TIMEOUT);
+    console.log(`[auto-eval] Idle timer set for ${Math.round(serverEvalInterval / 60000)} min`);
+    serverIdleTimer = setTimeout(() => triggerServerAutoEval(), serverEvalInterval);
   }
 
   function getGitBranch(cwd: string): string {
@@ -379,6 +451,8 @@ app.prepare().then(() => {
       });
       serverAutoEvalProcess = null;
       currentEvalType = null;
+      // Reset idle timer so evals keep running after errors
+      resetServerIdleTimer();
     });
   }
 
@@ -420,7 +494,7 @@ app.prepare().then(() => {
     // Send initial state including branch and auto-eval
     const branch = getGitBranch(initialCwd);
     const evalRunning = !!serverAutoEvalProcess && !serverAutoEvalProcess.killed;
-    ws.send(JSON.stringify({ type: "state", cwd: initialCwd, branch, autoEval: serverAutoEvalEnabled, evalRunning, evalType: evalRunning ? currentEvalType : null }));
+    ws.send(JSON.stringify({ type: "state", cwd: initialCwd, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning, evalType: evalRunning ? currentEvalType : null }));
 
     ws.on("message", (msg: Buffer | string) => {
       // Reject oversized messages
@@ -463,7 +537,7 @@ app.prepare().then(() => {
             chatSessions.set(ws, null);
             const branch = getGitBranch(target);
             const evalRunningNow = !!serverAutoEvalProcess && !serverAutoEvalProcess.killed;
-            ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null }));
+            ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null }));
           } else {
             ws.send(JSON.stringify({ type: "error", message: `Directory not found: ${target}` }));
           }
@@ -480,6 +554,14 @@ app.prepare().then(() => {
           broadcastToChat({ type: "auto_eval_state", enabled: serverAutoEvalEnabled });
         } else if (parsed.type === "trigger_auto_eval") {
           triggerServerAutoEval();
+        } else if (parsed.type === "set_eval_interval") {
+          const ms = typeof parsed.interval === "number" ? parsed.interval : 0;
+          if (ms >= MIN_EVAL_INTERVAL && ms <= MAX_EVAL_INTERVAL) {
+            serverEvalInterval = ms;
+            saveEvalInterval(ms);
+            resetServerIdleTimer();
+            broadcastToChat({ type: "eval_interval_state", interval: serverEvalInterval });
+          }
         }
       } catch {
         // Ignore malformed JSON
@@ -524,6 +606,12 @@ app.prepare().then(() => {
     // Enable thinking if requested
     if (thinking) {
       args.push("--thinking");
+    }
+
+    // Inject memory files as system prompt context
+    const memoryPrompt = loadMemoryPrompt();
+    if (memoryPrompt) {
+      args.push("--append-system-prompt", memoryPrompt);
     }
 
     // Resume session if we have one
@@ -606,137 +694,6 @@ app.prepare().then(() => {
       chatProcesses.delete(ws);
     });
   }
-
-  // ============================================
-  // TERMINAL WebSocket — PTY (legacy)
-  // ============================================
-
-  wssTerminal.on("connection", async (ws: WebSocket) => {
-    // Lazy-load node-pty (native module)
-    const pty = await import("node-pty");
-
-    // If there's an existing PTY session, reconnect to it
-    if (activePty) {
-      // Clean up old WebSocket if any
-      if (activeWs && activeWs !== ws && activeWs.readyState === WebSocket.OPEN) {
-        activeWs.close();
-      }
-      activeWs = ws;
-
-      // Tell the client the session is live
-      ws.send(JSON.stringify({ type: "status", status: "connected" }));
-
-      // Wire up the existing PTY to the new WebSocket
-      const dataHandler = activePty.onData((data: string) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(data);
-        }
-      });
-
-      ws.on("message", (msg: Buffer | string) => {
-        const message = msg.toString();
-        try {
-          const parsed = JSON.parse(message);
-          if (parsed.type === "resize" && activePty) {
-            activePty.resize(parsed.cols, parsed.rows);
-            return;
-          }
-        } catch {
-          // Not JSON — treat as keystroke
-        }
-        if (activePty) {
-          activePty.write(message);
-        }
-      });
-
-      ws.on("close", () => {
-        dataHandler.dispose();
-        if (activeWs === ws) {
-          activeWs = null;
-        }
-      });
-
-      ws.send("\r\n\x1b[33m[Reconnected to existing session]\x1b[0m\r\n");
-      return;
-    }
-
-    // Resolve claude binary — ~/.local/bin may not be in default PATH
-    const home = process.env.HOME || "/Users/abereyes";
-    const claudePath = `${home}/.local/bin/claude`;
-
-    // Ensure ~/.local/bin is in PATH for child processes
-    const envPath = process.env.PATH || "";
-    const localBin = `${home}/.local/bin`;
-    const fullPath = envPath.includes(localBin) ? envPath : `${localBin}:${envPath}`;
-
-    let shell;
-    try {
-      shell = pty.spawn(claudePath, [], {
-        name: "xterm-256color",
-        cols: 80,
-        rows: 30,
-        cwd: home,
-        env: {
-          ...process.env,
-          TERM: "xterm-256color",
-          PATH: fullPath,
-        } as Record<string, string>,
-      });
-    } catch (error: any) {
-      console.error("Failed to spawn claude PTY:", error.message);
-      ws.send(JSON.stringify({ type: "status", status: "error", message: error.message }));
-      ws.send(
-        "\r\n\x1b[31m[Failed to start Claude session]\x1b[0m\r\n" +
-        `\x1b[33mError: ${error.message}\x1b[0m\r\n\r\n` +
-        "\x1b[90mThis usually means:\x1b[0m\r\n" +
-        "\x1b[90m  - PTY allocation blocked (run server from a real terminal, not inside Claude Code)\x1b[0m\r\n" +
-        "\x1b[90m  - claude binary not found at: " + claudePath + "\x1b[0m\r\n" +
-        "\x1b[90m  - node-pty native module needs rebuild: npm rebuild node-pty\x1b[0m\r\n"
-      );
-      return;
-    }
-
-    activePty = shell;
-    activeWs = ws;
-
-    // Tell the client the session is live
-    ws.send(JSON.stringify({ type: "status", status: "connected" }));
-
-    shell.onData((data: string) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
-      }
-    });
-
-    shell.onExit(() => {
-      activePty = null;
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "status", status: "ended" }));
-        ws.send("\r\n\x1b[31m[Claude session ended]\x1b[0m\r\n");
-        ws.close();
-      }
-    });
-
-    ws.on("message", (msg: Buffer | string) => {
-      const message = msg.toString();
-      try {
-        const parsed = JSON.parse(message);
-        if (parsed.type === "resize") {
-          shell.resize(parsed.cols, parsed.rows);
-          return;
-        }
-      } catch {
-        // Not JSON — treat as keystroke
-      }
-      shell.write(message);
-    });
-
-    ws.on("close", () => {
-      if (activeWs === ws) {
-        activeWs = null;
-      }
-    });
-  });
 
   server.listen(port, () => {
     console.log(`> Bridgette ready on http://${hostname}:${port}`);

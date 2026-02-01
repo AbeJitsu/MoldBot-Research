@@ -75,6 +75,7 @@ export default function ChatSession() {
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
   const [autoEval, setAutoEval] = useState(false);
+  const [evalInterval, setEvalInterval] = useState(15 * 60 * 1000);
   const [sessionSearch, setSessionSearch] = useState("");
   const [branch, setBranch] = useState<string | null>(null);
   const [evalRunning, setEvalRunning] = useState(false);
@@ -187,8 +188,14 @@ export default function ChatSession() {
       if (data.cwd) setCwd(data.cwd);
       if (data.branch) setBranch(data.branch);
       if (data.autoEval !== undefined) setAutoEval(!!data.autoEval);
+      if (data.evalInterval !== undefined) setEvalInterval(data.evalInterval);
       if (data.evalRunning !== undefined) setEvalRunning(!!data.evalRunning);
       if (data.evalType !== undefined) setEvalType(data.evalType);
+      return;
+    }
+
+    if (type === "eval_interval_state") {
+      if (data.interval !== undefined) setEvalInterval(data.interval);
       return;
     }
 
@@ -518,13 +525,34 @@ export default function ChatSession() {
                 ? "bg-blue-500/10 text-blue-300 border-blue-500/30 shadow-sm shadow-blue-500/10"
                 : "text-gray-500 border-white/[0.06] hover:text-gray-300 hover:border-white/[0.12] hover:bg-white/[0.03]"
             }`}
-            title={autoEval ? "Auto-eval enabled (15 min idle)" : "Auto-eval disabled"}
+            title={autoEval ? `Auto-eval enabled (${Math.round(evalInterval / 60000)} min idle)` : "Auto-eval disabled"}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
             </svg>
             Auto
           </button>
+
+          {/* Eval interval selector (visible when auto-eval enabled) */}
+          {autoEval && (
+            <select
+              value={evalInterval}
+              onChange={(e) => {
+                const ms = parseInt(e.target.value, 10);
+                wsRef.current?.send(JSON.stringify({ type: "set_eval_interval", interval: ms }));
+              }}
+              className="text-gray-400 text-xs font-medium border border-white/[0.06] rounded-md px-1.5 py-1 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-blue-500/50 cursor-pointer transition-all duration-200"
+              style={{ background: 'var(--surface-2)', fontFamily: 'var(--font-mono)' }}
+              title="Auto-eval interval"
+            >
+              <option value={60000}>1 min</option>
+              <option value={300000}>5 min</option>
+              <option value={900000}>15 min</option>
+              <option value={1800000}>30 min</option>
+              <option value={3600000}>1 hr</option>
+              <option value={7200000}>2 hr</option>
+            </select>
+          )}
 
           {/* Run Now button (visible when auto-eval enabled) */}
           {autoEval && (
