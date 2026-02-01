@@ -44,19 +44,37 @@ app.prepare().then(() => {
   // CHAT WebSocket — claude --print --stream-json
   // ============================================
 
-  // Track chat session ID per WebSocket connection
+  // Per-connection state
   const chatSessions = new Map<WebSocket, string | null>();
-  // Track active claude process per WebSocket
   const chatProcesses = new Map<WebSocket, ChildProcess>();
+  const chatCwds = new Map<WebSocket, string>();
+
+  const defaultCwd = process.env.HOME || "/Users/abereyes";
 
   wssChat.on("connection", (ws: WebSocket) => {
     chatSessions.set(ws, null);
+    chatCwds.set(ws, defaultCwd);
+
+    // Send initial state including cwd
+    ws.send(JSON.stringify({ type: "state", cwd: defaultCwd }));
 
     ws.on("message", (msg: Buffer | string) => {
       try {
         const parsed = JSON.parse(msg.toString());
         if (parsed.type === "message") {
           handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws));
+        } else if (parsed.type === "set_cwd") {
+          // Validate directory exists
+          const fs = require("fs");
+          const target = parsed.cwd;
+          if (target && fs.existsSync(target) && fs.statSync(target).isDirectory()) {
+            chatCwds.set(ws, target);
+            // Reset session when changing directory (new context)
+            chatSessions.set(ws, null);
+            ws.send(JSON.stringify({ type: "state", cwd: target }));
+          } else {
+            ws.send(JSON.stringify({ type: "error", message: `Directory not found: ${target}` }));
+          }
         }
       } catch {
         // Ignore malformed messages
@@ -64,13 +82,13 @@ app.prepare().then(() => {
     });
 
     ws.on("close", () => {
-      // Kill any running claude process for this connection
       const proc = chatProcesses.get(ws);
       if (proc && !proc.killed) {
         proc.kill("SIGTERM");
       }
       chatProcesses.delete(ws);
       chatSessions.delete(ws);
+      chatCwds.delete(ws);
     });
   });
 
@@ -105,8 +123,10 @@ app.prepare().then(() => {
     const localBin = `${home}/.local/bin`;
     const fullPath = envPath.includes(localBin) ? envPath : `${localBin}:${envPath}`;
 
+    const cwd = chatCwds.get(ws) || home;
+
     const proc = spawn(claudePath, args, {
-      cwd: home,
+      cwd,
       env: { ...process.env, PATH: fullPath },
       stdio: ["ignore", "pipe", "pipe"],
     });
