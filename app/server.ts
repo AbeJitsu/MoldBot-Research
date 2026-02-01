@@ -141,6 +141,16 @@ app.prepare().then(() => {
           execSync(`git checkout -b ${branchName}`, { cwd, stdio: "pipe" });
         }
       }
+      // Keep dev up to date with main
+      try {
+        execSync("git merge main --no-edit", { cwd, stdio: "pipe" });
+      } catch (mergeErr: any) {
+        console.error(`Failed to merge main into dev: ${mergeErr.message}`);
+        broadcastToChat({ type: "error", message: `Failed to merge main into dev: ${mergeErr.message}` });
+        // Abort the failed merge and bail
+        try { execSync("git merge --abort", { cwd, stdio: "pipe" }); } catch {}
+        return;
+      }
     } catch (err: any) {
       console.error(`Failed to switch to dev branch: ${err.message}`);
       broadcastToChat({ type: "error", message: `Failed to switch to dev branch: ${err.message}` });
@@ -197,12 +207,12 @@ app.prepare().then(() => {
 
     serverAutoEvalProcess = proc;
 
-    // Safety timeout — kill if eval runs longer than 10 minutes
-    const AUTO_EVAL_TIMEOUT = 10 * 60 * 1000;
+    // Safety timeout — kill if eval runs longer than 30 minutes
+    const AUTO_EVAL_TIMEOUT = 30 * 60 * 1000;
     const evalTimeout = setTimeout(() => {
       if (proc && !proc.killed) {
-        console.error("[auto-eval] Timeout after 10 minutes — killing process");
-        broadcastToChat({ type: "error", message: "Auto-eval timed out after 10 minutes" });
+        console.error("[auto-eval] Timeout after 30 minutes — killing process");
+        broadcastToChat({ type: "error", message: "Auto-eval timed out after 30 minutes" });
         proc.kill("SIGTERM");
       }
     }, AUTO_EVAL_TIMEOUT);

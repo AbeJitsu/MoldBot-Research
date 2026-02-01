@@ -125,11 +125,34 @@ Auto-eval runs at the **server level** — works with or without a browser conne
 - **Headless operation** — if no browser is connected, eval runs and logs to console
 - **Broadcast** — if browsers are connected, eval output streams to all clients
 - **Always works on `dev` branch**, never main
-- Switches to `dev` (creates from main if it doesn't exist), commits there
+- Switches to `dev` (creates from main if it doesn't exist), merges `main` into `dev` before running, then commits there
+- If merge conflicts occur, aborts merge and skips the eval
 - After eval completes, broadcasts `auto_eval_complete` with `git diff --stat` summary
 - Don't chain evals back-to-back — timer resets after each run
 - **Manual trigger** — UI "Run Now" button or send `{ type: "trigger_auto_eval" }` via WS
-- The eval prompt lives at `automations/auto-eval/prompt.md`
+
+### Three-Eval Rotation
+
+Evals rotate through three focus areas, one per trigger:
+
+| Index | Type | Prompt File |
+|-------|------|-------------|
+| 0 | **frontend** | `automations/auto-eval/frontend.md` |
+| 1 | **backend** | `automations/auto-eval/backend.md` |
+| 2 | **functionality** | `automations/auto-eval/functionality.md` |
+
+- Current index persisted in `.auto-eval-index` at project root
+- After each eval, index advances and wraps (0 → 1 → 2 → 0)
+- Server broadcasts `evalType` in `auto_eval_start` and state messages
+- Connected clients see `evalRunning` and `evalType` in the initial `state` event
+
+### Testing
+
+```bash
+cd app && npm run test:run   # Unit + integration tests (vitest)
+```
+
+Tests cover rotation math (unit) and WebSocket message flow (integration, requires dev server on :3000).
 
 ## Commands
 
@@ -148,3 +171,12 @@ Always ensure the dev server is running on port 3000 so the user can test change
 - **After build failures:** Fix the issue, restart the server, verify it returns 200
 - **Never leave the server down** after finishing work
 - **Verification sequence:** Build → Restart dev server → Confirm 200 → Then done
+
+## Documentation
+
+Keep these docs updated when features change:
+
+- **`CLAUDE.md`** — Architecture, decisions, task management, auto-eval docs
+- **`roadmap.md`** — What's built, what's next, project structure
+
+When completing a feature or significant change, update both files before committing.
