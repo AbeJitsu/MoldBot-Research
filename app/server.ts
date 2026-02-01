@@ -509,6 +509,14 @@ app.prepare().then(() => {
 
     proc.stdout?.on("data", (chunk: Buffer) => {
       buffer += chunk.toString();
+
+      // Guard against unbounded buffer growth
+      if (buffer.length > MAX_STDOUT_BUFFER) {
+        console.warn(`[auto-eval] stdout buffer exceeded ${MAX_STDOUT_BUFFER} bytes, discarding`);
+        buffer = "";
+        return;
+      }
+
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
 
@@ -641,6 +649,13 @@ app.prepare().then(() => {
   function saveLastCwd(cwd: string): void {
     try { writeFileSync(cwdFile, cwd); } catch {}
   }
+
+  // Maximum stdout buffer size (5MB) — if a single line exceeds this, discard and reset
+  // Prevents unbounded memory growth if claude emits very long lines without newlines
+  const MAX_STDOUT_BUFFER = 5 * 1024 * 1024;
+
+  // Safety timeout for chat processes (10 minutes) — prevents hung claude processes
+  const CHAT_PROCESS_TIMEOUT = 10 * 60 * 1000;
 
   // Maximum WebSocket message size (1MB) to prevent memory abuse
   const MAX_WS_MESSAGE_SIZE = 1024 * 1024;
@@ -874,11 +889,29 @@ app.prepare().then(() => {
 
     chatProcesses.set(ws, proc);
 
+    // Safety timeout — kill hung chat processes after 10 minutes
+    const chatTimeout = setTimeout(() => {
+      if (proc && proc.exitCode === null) {
+        console.warn("[chat] Process timed out after 10 minutes — killing");
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "error", message: "Chat process timed out after 10 minutes" }));
+        }
+        killProcessWithTimeout(proc);
+      }
+    }, CHAT_PROCESS_TIMEOUT);
+
     // Buffer for incomplete NDJSON lines
     let buffer = "";
 
     proc.stdout?.on("data", (chunk: Buffer) => {
       buffer += chunk.toString();
+
+      // Guard against unbounded buffer growth (e.g. very long line without newlines)
+      if (buffer.length > MAX_STDOUT_BUFFER) {
+        console.warn(`[chat] stdout buffer exceeded ${MAX_STDOUT_BUFFER} bytes, discarding`);
+        buffer = "";
+        return;
+      }
 
       // Process complete lines
       const lines = buffer.split("\n");
@@ -914,6 +947,7 @@ app.prepare().then(() => {
     });
 
     proc.on("close", () => {
+      clearTimeout(chatTimeout);
       // Flush any remaining buffer
       if (buffer.trim() && ws.readyState === WebSocket.OPEN) {
         ws.send(buffer.trim());
@@ -925,6 +959,7 @@ app.prepare().then(() => {
     });
 
     proc.on("error", (err) => {
+      clearTimeout(chatTimeout);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "error", message: err.message }));
       }
