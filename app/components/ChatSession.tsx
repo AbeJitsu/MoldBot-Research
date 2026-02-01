@@ -128,7 +128,12 @@ export default function ChatSession() {
     }
     return "";
   });
-  const [cwd, setCwd] = useState<string>("");
+  const [cwd, setCwd] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("bridgette-cwd") || "";
+    }
+    return "";
+  });
   const [showDirPicker, setShowDirPicker] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -196,6 +201,13 @@ export default function ChatSession() {
   useEffect(() => {
     saveChat(sessionId, messages);
   }, [sessionId, messages]);
+
+  // Persist working directory to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined" && cwd) {
+      localStorage.setItem("bridgette-cwd", cwd);
+    }
+  }, [cwd]);
 
   // Focus input on mount + request notification permission
   useEffect(() => {

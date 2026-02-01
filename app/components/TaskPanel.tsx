@@ -530,9 +530,9 @@ function useTasks() {
     // Always fetch on mount to handle HMR and ensure data is fresh
     fetchTasks();
 
-    // Start polling if first subscriber
+    // Start polling if first subscriber (1 second for responsive UI — auto-eval tasks appear quickly)
     if (!pollInterval) {
-      pollInterval = window.setInterval(fetchTasks, 3000);
+      pollInterval = window.setInterval(fetchTasks, 1000);
     }
 
     return () => {

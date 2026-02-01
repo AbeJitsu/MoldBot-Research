@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
+import { addAutomationToQueue } from "@/lib/automation-queue";
 
 const AUTOMATIONS_DIR = join(process.cwd(), "..", "automations");
 
@@ -58,13 +59,18 @@ export async function POST(
     const promptPath = join(AUTOMATIONS_DIR, name, "prompt.md");
     const prompt = await readFile(promptPath, "utf-8");
 
-    // Return the prompt for the client to paste into the terminal
-    // The actual execution happens through the PTY session
-    return NextResponse.json({
-      name,
-      prompt,
-      instruction: "Paste this prompt into the active terminal session to execute.",
-    });
+    // Queue the prompt for execution — WebSocket handler will pick it up on next message
+    addAutomationToQueue(prompt);
+
+    // Return 202 Accepted indicating the automation has been queued
+    return NextResponse.json(
+      {
+        name,
+        status: "queued",
+        message: "Automation prompt queued for execution. Will execute via connected WebSocket client.",
+      },
+      { status: 202 }
+    );
   } catch {
     return NextResponse.json(
       { error: "Prompt template not found" },

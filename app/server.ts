@@ -6,6 +6,7 @@ import { spawn, ChildProcess, execSync } from "child_process";
 import { readFileSync, writeFileSync, renameSync, copyFileSync, existsSync, readdirSync, statSync, lstatSync } from "fs";
 import { join } from "path";
 import crypto from "crypto";
+import { getNextAutomation } from "./lib/automation-queue";
 
 // Load .env if present
 try {
@@ -800,6 +801,13 @@ app.prepare().then(() => {
     const evalRunning = !!serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null;
     ws.send(JSON.stringify({ type: "state", cwd: initialCwd, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning, evalType: evalRunning ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining }));
 
+    // Process any pending automations queued by scheduled triggers (e.g., from curl POST)
+    const pendingAuto = getNextAutomation();
+    if (pendingAuto) {
+      console.log("[automation] Executing queued automation prompt");
+      handleChatMessage(ws, pendingAuto.prompt, chatSessions.get(ws) || null, false, undefined);
+    }
+
     ws.on("message", (msg: Buffer | string) => {
       // Rate limiting — prevent message flooding
       const now = Date.now();
@@ -915,6 +923,12 @@ app.prepare().then(() => {
             saveEvalInterval(ms);
             resetServerIdleTimer();
             broadcastToChat({ type: "eval_interval_state", interval: serverEvalInterval, evalTimerStart: serverIdleTimerStart, evalChaining });
+          }
+        } else if (parsed.type === "trigger_automation") {
+          // Receive automation prompt from API and forward to chat as a user message
+          const prompt = typeof parsed.prompt === "string" ? parsed.prompt : null;
+          if (prompt) {
+            handleChatMessage(ws, prompt, chatSessions.get(ws) || null, false, undefined);
           }
         }
       } catch (err) {
