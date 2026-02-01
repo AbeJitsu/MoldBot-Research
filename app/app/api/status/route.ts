@@ -66,9 +66,15 @@ function getGitInfo(): { branch: string; lastCommit: string; lastCommitDate: str
   const cwd = PROJECT_ROOT;
   const opts = { cwd, stdio: "pipe" as const, timeout: EXEC_TIMEOUT_MS };
   try {
-    const branch = execSync("git branch --show-current", opts).toString().trim();
-    const lastCommit = execSync("git log -1 --format=%s", opts).toString().trim();
-    const lastCommitDate = execSync("git log -1 --format=%ci", opts).toString().trim();
+    // Single git command instead of 3 sequential calls — prevents 15s blocking if git hangs
+    const output = execSync("git log -1 --format=%D%n%s%n%ci", opts).toString().trim();
+    const lines = output.split("\n");
+    // %D gives "HEAD -> branch, origin/branch" — extract the branch name
+    const refLine = lines[0] || "";
+    const branchMatch = refLine.match(/HEAD -> ([^,]+)/);
+    const branch = branchMatch ? branchMatch[1].trim() : execSync("git branch --show-current", opts).toString().trim();
+    const lastCommit = lines[1] || "unknown";
+    const lastCommitDate = lines[2] || "";
     return { branch, lastCommit, lastCommitDate };
   } catch {
     return { branch: "unknown", lastCommit: "unknown", lastCommitDate: "" };

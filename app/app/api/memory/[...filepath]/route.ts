@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, writeFile, rename } from "fs/promises";
+import { readFile, writeFile, rename, unlink } from "fs/promises";
 import { join } from "path";
 import { isAuthorized, unauthorizedResponse } from "@/lib/auth";
 
@@ -92,8 +92,14 @@ export async function PUT(
 
     // Atomic write: write to temp file, then rename
     const tmpPath = `${fullPath}.tmp`;
-    await writeFile(tmpPath, content, "utf-8");
-    await rename(tmpPath, fullPath);
+    try {
+      await writeFile(tmpPath, content, "utf-8");
+      await rename(tmpPath, fullPath);
+    } catch (writeErr) {
+      // Clean up orphan temp file if rename failed — original file stays intact
+      try { await unlink(tmpPath); } catch {}
+      throw writeErr;
+    }
 
     return NextResponse.json({ path: filepath.join("/"), saved: true });
   } catch (error: any) {

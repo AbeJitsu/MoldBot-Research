@@ -489,7 +489,7 @@ app.prepare().then(() => {
       }
     });
 
-    proc.on("close", () => {
+    proc.on("close", (code) => {
       clearTimeout(evalTimeout);
       // Flush remaining buffer
       if (buffer.trim()) {
@@ -499,6 +499,9 @@ app.prepare().then(() => {
       serverAutoEvalProcess = null;
       const completedEvalType = currentEvalType;
       currentEvalType = null;
+
+      // Detect whether the eval actually succeeded based on exit code
+      const exitedCleanly = code === 0 || code === null;
 
       // Get change summary
       let summary = "";
@@ -511,27 +514,35 @@ app.prepare().then(() => {
       const evalBranch = getGitBranch(cwd);
       const commitHash = getCommitHash(cwd);
 
-      // Write eval log entry
+      // Write eval log entry — use exit code to determine real status
+      const evalStatus = exitedCleanly ? "success" : "error";
       writeEvalLogEntry({
         id: crypto.randomUUID(),
         evalType: completedEvalType || "unknown",
         timestamp: new Date().toISOString(),
         branch: evalBranch,
         commitHash,
-        diffSummary: summary,
-        status: "success",
+        diffSummary: exitedCleanly ? summary : `Process exited with code ${code}. ${summary}`,
+        status: evalStatus,
       });
 
-      // Create completed task with summary
-      if (completedEvalType) {
+      if (!exitedCleanly) {
+        console.error(`[auto-eval] Process exited with code ${code}`);
+        broadcastToChat({ type: "error", message: `Auto-eval exited with code ${code}` });
+      }
+
+      // Create completed task with summary (only on success)
+      if (completedEvalType && exitedCleanly) {
         createEvalTask(completedEvalType, summary);
       }
 
-      broadcastToChat({ type: "auto_eval_complete", summary, branch: evalBranch, evalType: completedEvalType });
+      broadcastToChat({ type: "auto_eval_complete", summary, branch: evalBranch, evalType: completedEvalType, status: evalStatus });
 
-      // Chain: next eval fires after short cooldown
-      evalChaining = true;
-      resetServerIdleTimer();
+      // Chain: next eval fires after short cooldown (only if auto-eval is still enabled)
+      if (serverAutoEvalEnabled) {
+        evalChaining = true;
+        resetServerIdleTimer();
+      }
     });
 
     proc.on("error", (err) => {
