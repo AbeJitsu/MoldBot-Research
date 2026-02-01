@@ -3,7 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { spawn, ChildProcess, execSync } from "child_process";
-import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync, lstatSync } from "fs";
+import { readFileSync, writeFileSync, renameSync, copyFileSync, existsSync, readdirSync, statSync, lstatSync } from "fs";
 import { join } from "path";
 import crypto from "crypto";
 
@@ -78,6 +78,30 @@ let serverIdleTimerStart: number | null = null;
 
 const EVAL_CHAIN_COOLDOWN = 30 * 1000; // 30 seconds between chained evals
 
+// ============================================
+// RATE LIMIT DETECTION & RETRY CONFIG
+// ============================================
+
+const RATE_LIMIT_PATTERNS = [
+  /rate.?limit/i,
+  /usage.?limit/i,
+  /\b429\b/,
+  /too many requests/i,
+  /capacity/i,
+  /overloaded/i,
+];
+
+function isRateLimitError(text: string): boolean {
+  return RATE_LIMIT_PATTERNS.some((p) => p.test(text));
+}
+
+// Exponential backoff: 30s, 60s, 120s, 240s, 480s (~15 min total)
+const RETRY_DELAYS = [30, 60, 120, 240, 480];
+
+function getRetryDelay(attempt: number): number | null {
+  return attempt < RETRY_DELAYS.length ? RETRY_DELAYS[attempt] : null;
+}
+
 // Three-eval rotation system
 const EVAL_TYPES = ["frontend", "backend", "functionality", "memory"] as const;
 type EvalType = (typeof EVAL_TYPES)[number];
@@ -104,6 +128,7 @@ let currentEvalType: EvalType | null = null;
 
 const EVAL_LOG_FILE = join(process.cwd(), "..", "eval-log.json");
 const MAX_EVAL_LOG_ENTRIES = 200;
+let evalLogWriteCount = 0;
 
 interface EvalLogEntry {
   id: string;
@@ -142,6 +167,11 @@ function writeEvalLogEntry(entry: EvalLogEntry): Promise<void> {
       const tmpFile = `${EVAL_LOG_FILE}.tmp`;
       writeFileSync(tmpFile, JSON.stringify(entries, null, 2));
       renameSync(tmpFile, EVAL_LOG_FILE);
+      // Periodic backup for corruption recovery (every 5 writes)
+      evalLogWriteCount++;
+      if (evalLogWriteCount % 5 === 0) {
+        try { copyFileSync(EVAL_LOG_FILE, `${EVAL_LOG_FILE}.backup`); } catch {}
+      }
     } catch (err: any) {
       console.error(`[eval-log] Failed to write: ${err.message}`);
     }
@@ -320,6 +350,22 @@ app.prepare().then(() => {
   const chatCwds = new Map<WebSocket, string>();
   const chatAlive = new Map<WebSocket, boolean>();
 
+  // Per-connection rate limit retry state
+  interface ChatRetryState {
+    timer: NodeJS.Timeout | null;
+    countdownTimer: NodeJS.Timeout | null;
+    attempt: number;
+    text: string;
+    sessionId: string | null;
+    model: string | undefined;
+    thinking: boolean | undefined;
+  }
+  const chatRetryStates = new Map<WebSocket, ChatRetryState>();
+
+  // Module-level eval retry state
+  let evalRetryAttempt = 0;
+  let evalRetryTimer: NodeJS.Timeout | null = null;
+
   // ============================================
   // WEBSOCKET HEARTBEAT — detect stale connections
   // ============================================
@@ -340,6 +386,12 @@ app.prepare().then(() => {
         chatCwds.delete(ws);
         chatAlive.delete(ws);
         rateLimitCounters.delete(ws);
+        const retryState = chatRetryStates.get(ws);
+        if (retryState) {
+          if (retryState.timer) clearTimeout(retryState.timer);
+          if (retryState.countdownTimer) clearInterval(retryState.countdownTimer);
+          chatRetryStates.delete(ws);
+        }
         ws.terminate();
         return;
       }
@@ -550,11 +602,12 @@ app.prepare().then(() => {
       }
     });
 
+    let evalStderrBuffer = "";
     proc.stderr?.on("data", (chunk: Buffer) => {
-      const errText = chunk.toString().trim();
-      if (errText) {
-        console.error(`[auto-eval stderr] ${errText}`);
-        broadcastToChat({ type: "error", message: errText });
+      evalStderrBuffer += chunk.toString();
+      // Cap stderr buffer to prevent memory exhaustion from verbose error output
+      if (evalStderrBuffer.length > MAX_STDOUT_BUFFER) {
+        evalStderrBuffer = evalStderrBuffer.slice(-MAX_STDOUT_BUFFER);
       }
     });
 
@@ -571,6 +624,43 @@ app.prepare().then(() => {
 
       // Detect whether the eval actually succeeded based on exit code
       const exitedCleanly = code === 0 || code === null;
+
+      // Rate limit retry for eval
+      if (!exitedCleanly && isRateLimitError(evalStderrBuffer)) {
+        const delay = getRetryDelay(evalRetryAttempt);
+        if (delay !== null) {
+          console.log(`[auto-eval] Rate limited, retrying in ${delay}s (attempt ${evalRetryAttempt + 1}/${RETRY_DELAYS.length})`);
+          broadcastToChat({
+            type: "eval_rate_limit_retry",
+            attempt: evalRetryAttempt + 1,
+            maxAttempts: RETRY_DELAYS.length,
+            delaySeconds: delay,
+          });
+
+          // Update task title to show retry
+          if (evalTaskId) {
+            import("./app/api/tasks/task-store").then(({ updateTask }) => {
+              return updateTask(evalTaskId!, { title: `[Auto-eval] ${evalLabel} eval retrying in ${delay}s...` });
+            }).catch(() => {});
+          }
+
+          evalRetryAttempt++;
+          evalRetryTimer = setTimeout(() => {
+            evalRetryTimer = null;
+            triggerServerAutoEval();
+          }, delay * 1000);
+          return; // Don't log, don't chain, don't update task yet
+        }
+        // Retries exhausted — fall through
+      }
+
+      // Reset eval retry on completion (success or non-rate-limit failure)
+      evalRetryAttempt = 0;
+
+      // Log stderr if present
+      if (evalStderrBuffer.trim()) {
+        console.error(`[auto-eval stderr] ${evalStderrBuffer.trim()}`);
+      }
 
       // Get change summary
       let summary = "";
@@ -746,11 +836,27 @@ app.prepare().then(() => {
           }
           evalChaining = false;
           resetServerIdleTimer();
+          // Cancel any pending rate limit retry
+          const pendingRetry = chatRetryStates.get(ws);
+          if (pendingRetry) {
+            if (pendingRetry.timer) clearTimeout(pendingRetry.timer);
+            if (pendingRetry.countdownTimer) clearInterval(pendingRetry.countdownTimer);
+            chatRetryStates.delete(ws);
+            ws.send(JSON.stringify({ type: "retry_cancelled" }));
+          }
           handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.thinking, parsed.model);
         } else if (parsed.type === "stop") {
           const proc = chatProcesses.get(ws);
           if (proc && proc.exitCode === null) {
             killProcessWithTimeout(proc);
+          }
+          // Cancel any pending rate limit retry
+          const stopRetry = chatRetryStates.get(ws);
+          if (stopRetry) {
+            if (stopRetry.timer) clearTimeout(stopRetry.timer);
+            if (stopRetry.countdownTimer) clearInterval(stopRetry.countdownTimer);
+            chatRetryStates.delete(ws);
+            ws.send(JSON.stringify({ type: "retry_cancelled" }));
           }
         } else if (parsed.type === "set_cwd") {
           const target = typeof parsed.cwd === "string" ? parsed.cwd : "";
@@ -796,6 +902,12 @@ app.prepare().then(() => {
             console.log("[auto-eval] Stopping eval via user request");
             killProcessWithTimeout(serverAutoEvalProcess);
           }
+          // Cancel eval retry timer if pending
+          if (evalRetryTimer) {
+            clearTimeout(evalRetryTimer);
+            evalRetryTimer = null;
+            evalRetryAttempt = 0;
+          }
         } else if (parsed.type === "set_eval_interval") {
           const ms = typeof parsed.interval === "number" ? parsed.interval : 0;
           if (ms >= MIN_EVAL_INTERVAL && ms <= MAX_EVAL_INTERVAL) {
@@ -828,6 +940,12 @@ app.prepare().then(() => {
       chatCwds.delete(ws);
       chatAlive.delete(ws);
       rateLimitCounters.delete(ws);
+      const closeRetry = chatRetryStates.get(ws);
+      if (closeRetry) {
+        if (closeRetry.timer) clearTimeout(closeRetry.timer);
+        if (closeRetry.countdownTimer) clearInterval(closeRetry.countdownTimer);
+        chatRetryStates.delete(ws);
+      }
       // Note: idle timer is server-level now, not cleaned up per-connection
     });
   });
@@ -964,14 +1082,17 @@ app.prepare().then(() => {
       }
     });
 
+    // Buffer stderr for rate limit detection instead of sending immediately
+    let stderrBuffer = "";
     proc.stderr?.on("data", (chunk: Buffer) => {
-      const errText = chunk.toString().trim();
-      if (errText && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "error", message: errText }));
+      stderrBuffer += chunk.toString();
+      // Cap stderr buffer to prevent memory exhaustion from verbose error output
+      if (stderrBuffer.length > MAX_STDOUT_BUFFER) {
+        stderrBuffer = stderrBuffer.slice(-MAX_STDOUT_BUFFER);
       }
     });
 
-    proc.on("close", () => {
+    proc.on("close", (code) => {
       clearTimeout(chatTimeout);
       // Flush any remaining buffer
       if (buffer.trim() && ws.readyState === WebSocket.OPEN) {
@@ -979,6 +1100,62 @@ app.prepare().then(() => {
       }
       buffer = "";
       chatProcesses.delete(ws);
+
+      // Check for rate limit on non-zero exit
+      if (code !== 0 && code !== null && isRateLimitError(stderrBuffer)) {
+        const retryState = chatRetryStates.get(ws) || {
+          timer: null, countdownTimer: null, attempt: 0,
+          text, sessionId, model, thinking,
+        };
+        const delay = getRetryDelay(retryState.attempt);
+
+        if (delay !== null && ws.readyState === WebSocket.OPEN) {
+          console.log(`[chat] Rate limited, retrying in ${delay}s (attempt ${retryState.attempt + 1}/${RETRY_DELAYS.length})`);
+
+          ws.send(JSON.stringify({
+            type: "rate_limit_retry",
+            attempt: retryState.attempt + 1,
+            maxAttempts: RETRY_DELAYS.length,
+            delaySeconds: delay,
+          }));
+
+          // Countdown timer — tick every second
+          let secondsLeft = delay;
+          retryState.countdownTimer = setInterval(() => {
+            secondsLeft--;
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "retry_countdown", secondsLeft }));
+            }
+            if (secondsLeft <= 0 && retryState.countdownTimer) {
+              clearInterval(retryState.countdownTimer);
+              retryState.countdownTimer = null;
+            }
+          }, 1000);
+
+          // Schedule retry
+          retryState.timer = setTimeout(() => {
+            retryState.timer = null;
+            if (ws.readyState === WebSocket.OPEN) {
+              handleChatMessage(ws, retryState.text, retryState.sessionId, retryState.thinking, retryState.model);
+            }
+          }, delay * 1000);
+
+          retryState.attempt++;
+          chatRetryStates.set(ws, retryState);
+          return; // Don't send error or reset idle timer yet
+        }
+
+        // Retries exhausted — fall through to send error
+      }
+
+      // Send stderr as error if not a rate limit retry
+      if (stderrBuffer.trim() && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "error", message: stderrBuffer.trim() }));
+      }
+
+      // Clear retry state on success
+      chatRetryStates.delete(ws);
+
       // Reset server idle timer after completion
       resetServerIdleTimer();
     });
@@ -1014,6 +1191,19 @@ app.prepare().then(() => {
       clearTimeout(serverIdleTimer);
       serverIdleTimer = null;
     }
+
+    // Cancel eval retry timer
+    if (evalRetryTimer) {
+      clearTimeout(evalRetryTimer);
+      evalRetryTimer = null;
+    }
+
+    // Cancel all chat retry timers
+    for (const [, retryState] of chatRetryStates) {
+      if (retryState.timer) clearTimeout(retryState.timer);
+      if (retryState.countdownTimer) clearInterval(retryState.countdownTimer);
+    }
+    chatRetryStates.clear();
 
     // Kill auto-eval process if running
     if (serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null) {

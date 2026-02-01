@@ -41,12 +41,41 @@ function withLock<T>(fn: () => T | Promise<T>): Promise<T> {
 // FILE I/O — atomic writes via temp file + rename
 // ============================================
 
+/** Validate that a parsed object has the minimum fields to be a valid Task */
+function isValidTask(obj: unknown): obj is Task {
+  if (typeof obj !== "object" || obj === null) return false;
+  const t = obj as Record<string, unknown>;
+  return (
+    typeof t.id === "string" && t.id.length > 0 &&
+    typeof t.title === "string" &&
+    typeof t.status === "string" && VALID_STATUSES.includes(t.status as Task["status"]) &&
+    typeof t.createdAt === "string"
+  );
+}
+
+/** Filter an array to only valid Task objects, logging any dropped entries */
+function sanitizeTasks(arr: unknown[]): Task[] {
+  const valid: Task[] = [];
+  let dropped = 0;
+  for (const item of arr) {
+    if (isValidTask(item)) {
+      valid.push(item);
+    } else {
+      dropped++;
+    }
+  }
+  if (dropped > 0) {
+    console.warn(`[tasks] Dropped ${dropped} malformed entries from tasks.json`);
+  }
+  return valid;
+}
+
 function tryParseTasksFile(filePath: string): Task[] | null {
   try {
     const data = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return null;
-    return parsed;
+    return sanitizeTasks(parsed);
   } catch {
     return null;
   }
@@ -72,7 +101,7 @@ function readTasks(): Task[] {
       }
       return [];
     }
-    return parsed;
+    return sanitizeTasks(parsed);
   } catch (err: any) {
     if (err.code === "ENOENT") {
       // File doesn't exist yet — normal on first run

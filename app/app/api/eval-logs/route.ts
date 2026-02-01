@@ -17,15 +17,31 @@ interface EvalLogEntry {
   status: "success" | "error" | "timeout";
 }
 
-function readEvalLogs(): EvalLogEntry[] {
+function tryParseEvalLogFile(filePath: string): EvalLogEntry[] | null {
   try {
-    const data = fs.readFileSync(EVAL_LOG_FILE, "utf-8");
+    const data = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) return null;
     return parsed;
   } catch {
-    return [];
+    return null;
   }
+}
+
+function readEvalLogs(): EvalLogEntry[] {
+  const entries = tryParseEvalLogFile(EVAL_LOG_FILE);
+  if (entries !== null) return entries;
+
+  // Main file missing or corrupt — attempt recovery from backup
+  const backupFile = `${EVAL_LOG_FILE}.backup`;
+  const recovered = tryParseEvalLogFile(backupFile);
+  if (recovered) {
+    console.log(`[eval-logs] Recovered ${recovered.length} entries from backup`);
+    try { fs.copyFileSync(backupFile, EVAL_LOG_FILE); } catch {}
+    return recovered;
+  }
+
+  return [];
 }
 
 const VALID_EVAL_TYPES = new Set(["frontend", "backend", "functionality", "memory"]);
