@@ -29,7 +29,7 @@ function setError(msg: string) {
 // ============================================
 
 export function LeftTaskPanel() {
-  const { tasks, error, addTask, advanceTask, deleteTask } = useTasks();
+  const { tasks, error, addTask, advanceTask, deleteTask, renameTask } = useTasks();
   const [newTitle, setNewTitle] = useState("");
 
   const pending = tasks.filter((t) => t.status === "pending");
@@ -49,7 +49,7 @@ export function LeftTaskPanel() {
 
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {pending.map((task) => (
-          <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} />
+          <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} onRename={renameTask} />
         ))}
         {pending.length === 0 && (
           <p className="text-xs text-gray-600 px-2 py-6 text-center">No pending tasks</p>
@@ -91,7 +91,7 @@ export function LeftTaskPanel() {
 // ============================================
 
 export function RightTaskPanel() {
-  const { tasks, advanceTask, deleteTask } = useTasks();
+  const { tasks, advanceTask, deleteTask, renameTask, clearCompleted } = useTasks();
 
   const needsTesting = tasks.filter((t) => t.status === "needs_testing");
   const completed = tasks.filter((t) => t.status === "completed");
@@ -105,7 +105,7 @@ export function RightTaskPanel() {
       </div>
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {needsTesting.map((task) => (
-          <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} />
+          <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} onRename={renameTask} />
         ))}
         {needsTesting.length === 0 && (
           <p className="text-xs text-gray-600 px-2 py-6 text-center">Nothing to test</p>
@@ -130,8 +130,19 @@ export function RightTaskPanel() {
         </button>
         {showCompleted && (
           <div className="px-2 pb-2 space-y-0.5 max-h-48 overflow-y-auto">
+            {completed.length > 0 && (
+              <div className="flex justify-end px-1 pb-1">
+                <button
+                  onClick={clearCompleted}
+                  className="text-xs text-gray-600 hover:text-red-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-red-500/5"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
             {completed.map((task) => (
-              <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} />
+              <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} onRename={renameTask} />
             ))}
           </div>
         )}
@@ -148,12 +159,16 @@ function TaskItem({
   task,
   onAdvance,
   onDelete,
+  onRename,
 }: {
   task: Task;
   onAdvance: (id: string) => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, title: string) => void;
 }) {
   const [showSummary, setShowSummary] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
 
   const statusIcon = {
     pending: "text-gray-600",
@@ -185,14 +200,45 @@ function TaskItem({
           {statusSymbol[task.status]}
         </button>
         <div className="flex-1 min-w-0">
-          <button
-            onClick={() => task.summary && setShowSummary(!showSummary)}
-            className={`text-[13px] leading-snug text-left w-full ${
-              task.status === "completed" ? "text-gray-600 line-through" : "text-gray-300"
-            } ${task.summary ? "cursor-pointer hover:text-gray-400" : ""}`}
-          >
-            {task.title}
-          </button>
+          {editing ? (
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={() => {
+                const trimmed = editTitle.trim();
+                if (trimmed && trimmed !== task.title) onRename(task.id, trimmed);
+                setEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === "Escape") {
+                  setEditTitle(task.title);
+                  setEditing(false);
+                }
+              }}
+              autoFocus
+              className="text-[13px] leading-snug w-full bg-transparent text-gray-200 border-b border-emerald-500/40 outline-none px-0 py-0"
+              style={{ fontFamily: 'var(--font-sans)' }}
+            />
+          ) : (
+            <button
+              onClick={() => task.summary && setShowSummary(!showSummary)}
+              onDoubleClick={() => {
+                if (task.status !== "completed") {
+                  setEditTitle(task.title);
+                  setEditing(true);
+                }
+              }}
+              className={`text-[13px] leading-snug text-left w-full ${
+                task.status === "completed" ? "text-gray-600 line-through" : "text-gray-300"
+              } ${task.summary ? "cursor-pointer hover:text-gray-400" : ""}`}
+              title={task.status !== "completed" ? "Double-click to rename" : undefined}
+            >
+              {task.title}
+            </button>
+          )}
           {task.status === "completed" && task.createdAt && (
             <span className="text-xs text-gray-600 block mt-0.5" style={{ fontFamily: 'var(--font-mono)' }}>
               {formatEST(task.createdAt)}
@@ -350,7 +396,48 @@ function useTasks() {
     }
   }, []);
 
-  return { tasks: globalTasks, error: errorMessage, addTask, advanceTask, deleteTask };
+  const renameTask = useCallback(async (id: string, title: string) => {
+    const previous = [...globalTasks];
+    globalTasks = globalTasks.map((t) => (t.id === id ? { ...t, title } : t));
+    notify();
+
+    try {
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) throw new Error("Failed to rename task");
+      const updated = await res.json();
+      globalTasks = globalTasks.map((t) => (t.id === id ? updated : t));
+      notify();
+    } catch {
+      globalTasks = previous;
+      notify();
+      setError("Failed to rename task");
+    }
+  }, []);
+
+  const clearCompleted = useCallback(async () => {
+    const completedIds = globalTasks.filter((t) => t.status === "completed").map((t) => t.id);
+    if (completedIds.length === 0) return;
+
+    // Optimistic update
+    const previous = [...globalTasks];
+    globalTasks = globalTasks.filter((t) => t.status !== "completed");
+    notify();
+
+    try {
+      const res = await fetch("/api/tasks/clear-completed", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to clear completed tasks");
+    } catch {
+      globalTasks = previous;
+      notify();
+      setError("Failed to clear completed tasks");
+    }
+  }, []);
+
+  return { tasks: globalTasks, error: errorMessage, addTask, advanceTask, deleteTask, renameTask, clearCompleted };
 }
 
 // ============================================

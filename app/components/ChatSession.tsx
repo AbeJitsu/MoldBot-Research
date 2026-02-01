@@ -838,6 +838,36 @@ export default function ChatSession() {
 
           {messages.length > 0 && (
             <button
+              onClick={() => {
+                const md = messages.map((m) => {
+                  const role = m.role === "user" ? "**You**" : "**Claude**";
+                  let text = `${role}\n\n${m.content}`;
+                  if (m.toolUses && m.toolUses.length > 0) {
+                    text += "\n\n" + m.toolUses.map((t) => `> Tool: ${t.name}${t.result ? `\n> Result: ${t.result.slice(0, 200)}` : ""}`).join("\n\n");
+                  }
+                  if (m.cost !== undefined) text += `\n\n_Cost: $${m.cost.toFixed(4)}_`;
+                  return text;
+                }).join("\n\n---\n\n");
+                const blob = new Blob([md], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `chat-${sessionId?.slice(0, 8) || "export"}-${new Date().toISOString().slice(0, 10)}.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="text-gray-500 hover:text-gray-300 transition-all duration-200 p-1 rounded-md hover:bg-white/[0.05]"
+              title="Export chat as Markdown"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+          )}
+          {messages.length > 0 && (
+            <button
               onClick={startNewChat}
               className="text-gray-500 hover:text-gray-300 transition-all duration-200 p-1 rounded-md hover:bg-white/[0.05]"
               title="New chat"

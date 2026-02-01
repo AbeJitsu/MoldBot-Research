@@ -144,6 +144,19 @@ export function updateTask(
   });
 }
 
+export function clearCompletedTasks(): Promise<number> {
+  return withLock(() => {
+    const tasks = readTasks();
+    const remaining = tasks.filter((t) => t.status !== "completed");
+    const cleared = tasks.length - remaining.length;
+    if (cleared > 0) {
+      writeTasks(remaining);
+      console.log(`[tasks] Cleared ${cleared} completed tasks`);
+    }
+    return cleared;
+  });
+}
+
 export function deleteTask(id: string): Promise<boolean> {
   return withLock(() => {
     const tasks = readTasks();

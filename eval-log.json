@@ -70,5 +70,41 @@
     "commitHash": "353cf807252c2feb762a5b24c00318074d28f84d",
     "diffSummary": ".auto-eval-index |  2 +-\n app/server.ts    | 99 +++++++++++++++++++++++++++++++++++++++++++++++---------\n eval-log.json    | 27 ++++++++++++++++\n tasks.json       | 21 ++++++++++++\n 4 files changed, 133 insertions(+), 16 deletions(-)",
     "status": "success"
+  },
+  {
+    "id": "2f43f78c-8df4-4233-8d4e-062e22a85951",
+    "evalType": "functionality",
+    "timestamp": "2026-02-01T18:34:02.930Z",
+    "branch": "dev",
+    "commitHash": "c1232e2ddcae87e4e89a77535156eb3ae25fdad3",
+    "diffSummary": "app/components/ChatSession.tsx | 127 ++++++++++++++++++++++++++++++++++++++---\n eval-log.json                  |  36 ++++++++++++\n tasks.json                     |  28 +++++++++\n 3 files changed, 183 insertions(+), 8 deletions(-)",
+    "status": "success"
+  },
+  {
+    "id": "1fb6ad6e-fd76-4901-bc9d-5d0bd4b73b78",
+    "evalType": "memory",
+    "timestamp": "2026-02-01T18:35:32.540Z",
+    "branch": "dev",
+    "commitHash": "a17584584f8edb62ff74a83a8be93d30c3eb5cf2",
+    "diffSummary": ".auto-eval-index              |  2 +-\n eval-log.json                 |  9 +++++++++\n memory/context/active-work.md | 11 +++++++----\n memory/context/decisions.md   |  5 +++++\n roadmap.md                    | 14 ++++++++++++--\n tasks.json                    |  7 +++++++\n 6 files changed, 41 insertions(+), 7 deletions(-)",
+    "status": "success"
+  },
+  {
+    "id": "004429df-17b1-4ae6-aca5-eaf4637ba1e4",
+    "evalType": "frontend",
+    "timestamp": "2026-02-01T18:38:49.771Z",
+    "branch": "dev",
+    "commitHash": "58830a3dff2d30328341e50d98ed36f86adcd912",
+    "diffSummary": ".auto-eval-index               |  2 +-\n app/components/ChatSession.tsx |  2 +-\n app/components/EvalLogs.tsx    | 24 ++++++++++++++++++------\n app/components/TaskPanel.tsx   |  4 ++--\n eval-log.json                  | 18 ++++++++++++++++++\n tasks.json                     | 14 ++++++++++++++\n 6 files changed, 54 insertions(+), 10 deletions(-)",
+    "status": "success"
+  },
+  {
+    "id": "e55e9952-5eec-4277-a32a-067279312453",
+    "evalType": "backend",
+    "timestamp": "2026-02-01T18:41:14.361Z",
+    "branch": "dev",
+    "commitHash": "5484dd40a80135741fef309cde5fda9da11d15cf",
+    "diffSummary": ".auto-eval-index                |  2 +-\n app/app/api/tasks/task-store.ts | 26 ++++++++++++++++++++++++--\n app/server.ts                   | 37 ++++++++++++++++++++++++++++++++++++-\n eval-log.json                   | 27 +++++++++++++++++++++++++++\n tasks.json                      | 21 +++++++++++++++++++++\n 5 files changed, 109 insertions(+), 4 deletions(-)",
+    "status": "success"
   }
 ]

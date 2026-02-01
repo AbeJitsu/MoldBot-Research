@@ -90,5 +90,33 @@
     "status": "completed",
     "createdAt": "2026-02-01T18:29:46.392Z",
     "summary": "What: backend improvements across 4 files\nWhy: Automatic backend quality pass\nHow: +133 -16 lines changed\n\n.auto-eval-index |  2 +-\n app/server.ts    | 99 +++++++++++++++++++++++++++++++++++++++++++++++---------\n eval-log.json    | 27 ++++++++++++++++\n tasks.json       | 21 ++++++++++++\n 4 files changed, 133 insertions(+), 16 deletions(-)"
+  },
+  {
+    "id": "d5955e7e-4cc6-4c8b-b75e-71e6bc3643c2",
+    "title": "[Auto-eval] Functionality eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:34:02.943Z",
+    "summary": "What: functionality improvements across 3 files\nWhy: Automatic functionality quality pass\nHow: +183 -8 lines changed\n\napp/components/ChatSession.tsx | 127 ++++++++++++++++++++++++++++++++++++++---\n eval-log.json                  |  36 ++++++++++++\n tasks.json                     |  28 +++++++++\n 3 files changed, 183 insertions(+), 8 deletions(-)"
+  },
+  {
+    "id": "5df300cb-09bc-4741-90f2-29497fffaa3b",
+    "title": "[Auto-eval] Memory eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:35:32.546Z",
+    "summary": "What: memory improvements across 6 files\nWhy: Automatic memory quality pass\nHow: +41 -7 lines changed\n\n.auto-eval-index              |  2 +-\n eval-log.json                 |  9 +++++++++\n memory/context/active-work.md | 11 +++++++----\n memory/context/decisions.md   |  5 +++++\n roadmap.md                    | 14 ++++++++++++--\n tasks.json                    |  7 +++++++\n 6 files changed, 41 insertions(+), 7 deletions(-)"
+  },
+  {
+    "id": "fcf288f6-80bd-40c0-ab54-3166235264ce",
+    "title": "[Auto-eval] Frontend eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:38:49.782Z",
+    "summary": "What: frontend improvements across 6 files\nWhy: Automatic frontend quality pass\nHow: +54 -10 lines changed\n\n.auto-eval-index               |  2 +-\n app/components/ChatSession.tsx |  2 +-\n app/components/EvalLogs.tsx    | 24 ++++++++++++++++++------\n app/components/TaskPanel.tsx   |  4 ++--\n eval-log.json                  | 18 ++++++++++++++++++\n tasks.json                     | 14 ++++++++++++++\n 6 files changed, 54 insertions(+), 10 deletions(-)"
+  },
+  {
+    "id": "1628d9b0-6fd8-4ffc-93e9-1c073dd46228",
+    "title": "[Auto-eval] Backend eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:41:14.372Z",
+    "summary": "What: backend improvements across 5 files\nWhy: Automatic backend quality pass\nHow: +109 -4 lines changed\n\n.auto-eval-index                |  2 +-\n app/app/api/tasks/task-store.ts | 26 ++++++++++++++++++++++++--\n app/server.ts                   | 37 ++++++++++++++++++++++++++++++++++++-\n eval-log.json                   | 27 +++++++++++++++++++++++++++\n tasks.json                      | 21 +++++++++++++++++++++\n 5 files changed, 109 insertions(+), 4 deletions(-)"
   }
 ]
