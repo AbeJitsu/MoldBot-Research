@@ -171,3 +171,12 @@ Always ensure the dev server is running on port 3000 so the user can test change
 - **After build failures:** Fix the issue, restart the server, verify it returns 200
 - **Never leave the server down** after finishing work
 - **Verification sequence:** Build → Restart dev server → Confirm 200 → Then done
+
+## Documentation
+
+Keep these docs updated when features change:
+
+- **`CLAUDE.md`** — Architecture, decisions, task management, auto-eval docs
+- **`roadmap.md`** — What's built, what's next, project structure
+
+When completing a feature or significant change, update both files before committing.

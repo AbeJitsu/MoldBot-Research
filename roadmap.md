@@ -1,6 +1,6 @@
 # Bridgette — Roadmap
 
-*Last updated: January 31, 2026*
+*Last updated: February 1, 2026*
 
 ---
 
@@ -67,7 +67,8 @@
 - **Task advance buttons** — Hover to reveal test/done actions on tasks
 - **Escape key + stop button** — Cancel streaming responses
 - **Stop hook** — TypeScript check + server health verification (no longer kills running server)
-- **Auto-iteration system** — Server-level idle detection (15 min), persisted state, headless operation, manual trigger, change summaries
+- **Auto-iteration system** — Server-level idle detection (15 min), three-eval rotation (frontend → backend → functionality), merges main into dev before each run, persisted state, headless operation, manual trigger, change summaries
+- **Auto-eval test suite** — Vitest unit tests (rotation math) + integration tests (WebSocket message flow)
 
 ### Dashboard
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
@@ -101,13 +102,17 @@
 
 ### Auto-Iteration System (Built)
 - Server-level idle timer (15 min) — works with or without browser
+- **Three-eval rotation** — frontend → backend → functionality, wraps around
+- Rotation index persisted in `.auto-eval-index`, eval prompts in `automations/auto-eval/`
+- **Merges main into dev** before each eval run (aborts cleanly on conflicts)
 - Persisted to `.auto-eval-enabled` file, survives server restarts
 - Headless operation — runs even when no browser connected
-- Broadcasts eval output to all connected clients
+- Broadcasts `evalRunning` and `evalType` in state events to all clients
 - Manual "Run Now" trigger button in UI
 - Always-visible branch indicator (non-main branches)
 - Change summary (`git diff --stat`) displayed after eval completes
 - Branch safety — all work on `dev`, never touches main directly
+- **Test suite** — `cd app && npm run test:run` (vitest, 9 tests)
 
 ### Advanced Features
 - Task descriptions and priorities
@@ -133,8 +138,11 @@ OpenClaw Research/
 │   ├── app/
 │   │   ├── page.tsx         ← dashboard (three-panel + tabs)
 │   │   └── api/             ← REST endpoints
+│   ├── __tests__/           ← vitest tests
+│   ├── vitest.config.ts
 │   └── package.json
 ├── automations/             ← prompt templates
+│   └── auto-eval/           ← rotation prompts (frontend/backend/functionality)
 ├── launchd/                 ← scheduling plists
 └── roadmap.md               ← this file
 ```
