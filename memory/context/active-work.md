@@ -7,17 +7,15 @@
 - **Status:** Core features complete, polish phase
 
 ## What's Done (Recent)
-- Conversation search — filter session history by keyword
-- Session resume context — shows first message preview and timestamp when resuming
-- Clear confirmation — dialog before clearing all sessions
-- Eval task pipeline — auto-evals create pending tasks, advance to needs_testing on completion
-- Vertical panel resize — drag between needs_testing/completed sections in right panel
-- Resizable horizontal panels — drag task sidebars (180–500px range)
-- Chat persistence — messages survive browser refresh via sessionStorage
-- Secure remote access — bearer token auth, Tailscale-ready
+- Browser notifications — native OS notifications when auto-evals complete while tab is in background
+- Edit tool diff viewer — side-by-side old/new display for Edit tool results (red removed, green added)
+- Collapsed panel badges — task count badges on collapsed sidebar buttons (green pending, amber needs_testing)
+- SessionId injection prevention — validates session IDs, task data corruption recovery
+- Search empty state — meaningful empty state for conversation search
+- Editor line numbers — line numbers in memory editor
+- Visible drag handles — drag handles on resizable panels more discoverable
 
 ## Next Steps
 - Responsive layout refinements
-- File diff viewer for edit tool results
 - Code syntax highlighting in markdown
 - Approval buttons for tool use

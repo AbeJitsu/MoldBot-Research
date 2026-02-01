@@ -106,6 +106,9 @@
 - **Resizable panels** — Horizontal drag on task sidebars (180–500px), vertical drag between needs_testing/completed
 - **Chat persistence** — Messages survive browser refresh via sessionStorage
 - **Eval task pipeline** — Auto-evals create pending tasks, advance to needs_testing on completion for user review
+- **Browser notifications** — Native OS notifications when auto-evals complete while tab is in background
+- **Edit tool diff viewer** — Side-by-side old/new display for Edit tool results (red removed, green added)
+- **Collapsed panel badges** — Task count badges on collapsed sidebar buttons (green pending, amber needs_testing)
 
 ### Dashboard
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
@@ -131,7 +134,7 @@
 - Responsive layout refinements
 
 ### Enhanced Chat UX
-- File diff viewer for edit tool results
+- ~~File diff viewer for edit tool results~~ — **Built** (side-by-side old/new in tool cards)
 - Approval buttons for tool use
 - Code syntax highlighting in markdown
 - ~~Search/filter conversation history~~ — **Built** (search box in session dropdown)

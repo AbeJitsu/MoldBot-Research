@@ -79,3 +79,8 @@
 - **Decision:** Check process exit code before logging eval as "success"; failed evals now log as "error"
 - **Reason:** Every eval was logged as "success" regardless of outcome, making eval-log unreliable
 - **Trade-off:** None — pure correctness fix
+
+## 2026-02-01: SessionId injection prevention
+- **Decision:** Validate session IDs against safe character regex before passing to CLI arguments
+- **Reason:** Unsanitized sessionId from WebSocket messages could inject arbitrary CLI flags
+- **Trade-off:** Rejects session IDs with special characters (acceptable — IDs are UUIDs)

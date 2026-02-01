@@ -15,6 +15,7 @@
 - `--include-partial-messages` gives real-time `content_block_delta` events for streaming UI
 - Child processes from `child_process.spawn` need explicit cleanup on server restart to avoid leaks
 - Memory API needs path traversal guards — `realpath` check against memory directory
+- WebSocket message fields (sessionId, directory) must be validated before use in CLI args — injection vector
 
 ## About Abe
 
