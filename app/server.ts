@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
+import { spawn, ChildProcess } from "child_process";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -20,21 +21,159 @@ app.prepare().then(() => {
     await handle(req, res, parsedUrl);
   });
 
-  const wss = new WebSocketServer({ noServer: true });
+  const wssTerminal = new WebSocketServer({ noServer: true });
+  const wssChat = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (req, socket, head) => {
     const { pathname } = parse(req.url!, true);
 
     if (pathname === "/ws/terminal") {
-      wss.handleUpgrade(req, socket, head, (ws) => {
-        wss.emit("connection", ws, req);
+      wssTerminal.handleUpgrade(req, socket, head, (ws) => {
+        wssTerminal.emit("connection", ws, req);
+      });
+    } else if (pathname === "/ws/chat") {
+      wssChat.handleUpgrade(req, socket, head, (ws) => {
+        wssChat.emit("connection", ws, req);
       });
     } else {
       socket.destroy();
     }
   });
 
-  wss.on("connection", async (ws: WebSocket) => {
+  // ============================================
+  // CHAT WebSocket — claude --print --stream-json
+  // ============================================
+
+  // Track chat session ID per WebSocket connection
+  const chatSessions = new Map<WebSocket, string | null>();
+  // Track active claude process per WebSocket
+  const chatProcesses = new Map<WebSocket, ChildProcess>();
+
+  wssChat.on("connection", (ws: WebSocket) => {
+    chatSessions.set(ws, null);
+
+    ws.on("message", (msg: Buffer | string) => {
+      try {
+        const parsed = JSON.parse(msg.toString());
+        if (parsed.type === "message") {
+          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws));
+        }
+      } catch {
+        // Ignore malformed messages
+      }
+    });
+
+    ws.on("close", () => {
+      // Kill any running claude process for this connection
+      const proc = chatProcesses.get(ws);
+      if (proc && !proc.killed) {
+        proc.kill("SIGTERM");
+      }
+      chatProcesses.delete(ws);
+      chatSessions.delete(ws);
+    });
+  });
+
+  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null) {
+    // Kill any existing process for this connection
+    const existingProc = chatProcesses.get(ws);
+    if (existingProc && !existingProc.killed) {
+      existingProc.kill("SIGTERM");
+    }
+
+    const home = process.env.HOME || "/Users/abereyes";
+    const claudePath = `${home}/.local/bin/claude`;
+
+    // Build args
+    const args = [
+      "-p",
+      "--output-format=stream-json",
+      "--verbose",
+      "--include-partial-messages",
+    ];
+
+    // Resume session if we have one
+    if (sessionId) {
+      args.push("--resume", sessionId);
+    }
+
+    // The user message is the last argument
+    args.push(text);
+
+    // Ensure ~/.local/bin is in PATH
+    const envPath = process.env.PATH || "";
+    const localBin = `${home}/.local/bin`;
+    const fullPath = envPath.includes(localBin) ? envPath : `${localBin}:${envPath}`;
+
+    const proc = spawn(claudePath, args, {
+      cwd: home,
+      env: { ...process.env, PATH: fullPath },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    chatProcesses.set(ws, proc);
+
+    // Buffer for incomplete NDJSON lines
+    let buffer = "";
+
+    proc.stdout?.on("data", (chunk: Buffer) => {
+      buffer += chunk.toString();
+
+      // Process complete lines
+      const lines = buffer.split("\n");
+      // Keep the last incomplete line in the buffer
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Extract session_id from init event for future --resume
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed.type === "system" && parsed.subtype === "init" && parsed.session_id) {
+            chatSessions.set(ws, parsed.session_id);
+          }
+        } catch {
+          // Not valid JSON, forward anyway
+        }
+
+        // Forward raw NDJSON line to the client
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(trimmed);
+        }
+      }
+    });
+
+    proc.stderr?.on("data", (chunk: Buffer) => {
+      const errText = chunk.toString().trim();
+      if (errText && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "error", message: errText }));
+      }
+    });
+
+    proc.on("close", (code: number | null) => {
+      // Flush any remaining buffer
+      if (buffer.trim() && ws.readyState === WebSocket.OPEN) {
+        ws.send(buffer.trim());
+      }
+      buffer = "";
+      chatProcesses.delete(ws);
+    });
+
+    proc.on("error", (err) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "error", message: err.message }));
+      }
+      chatProcesses.delete(ws);
+    });
+  }
+
+  // ============================================
+  // TERMINAL WebSocket — PTY (legacy)
+  // ============================================
+
+  wssTerminal.on("connection", async (ws: WebSocket) => {
     // Lazy-load node-pty (native module)
     const pty = await import("node-pty");
 
