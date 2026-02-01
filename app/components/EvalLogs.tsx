@@ -46,9 +46,12 @@ export default function EvalLogs() {
 
   useEffect(() => {
     fetchLogs();
+    // Auto-refresh every 15 seconds so new eval results appear without manual refresh
+    const interval = setInterval(fetchLogs, 15_000);
+    return () => clearInterval(interval);
   }, [fetchLogs]);
 
-  const filtered = filterType === "all" ? logs : logs.filter((l) => l.evalType === filterType);
+  const filtered = (filterType === "all" ? logs : logs.filter((l) => l.evalType === filterType)).slice().reverse();
 
   if (loading) {
     return (

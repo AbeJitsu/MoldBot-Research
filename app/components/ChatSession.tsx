@@ -897,6 +897,18 @@ export default function ChatSession() {
             )}
           </div>
 
+          {/* Message count + total cost */}
+          {messages.length > 0 && (() => {
+            const totalCost = messages.reduce((sum, m) => sum + (m.cost || 0), 0);
+            const msgCount = messages.filter((m) => m.role === "user").length;
+            return (
+              <span className="text-xs text-gray-600 flex items-center gap-1.5" style={{ fontFamily: 'var(--font-mono)' }}>
+                <span>{msgCount} msg{msgCount !== 1 ? "s" : ""}</span>
+                {totalCost > 0 && <span>· ${totalCost.toFixed(4)}</span>}
+              </span>
+            );
+          })()}
+
           {messages.length > 0 && (
             <button
               onClick={() => {
