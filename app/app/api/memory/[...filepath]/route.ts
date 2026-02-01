@@ -63,7 +63,18 @@ export async function PUT(
   try {
     const { filepath } = await params;
     const fullPath = resolveFilePath(filepath);
-    const { content } = await request.json();
+
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
+    const { content } = body;
 
     if (typeof content !== "string") {
       return NextResponse.json(

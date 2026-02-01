@@ -41,9 +41,21 @@ function readTasks(): Task[] {
   try {
     const data = fs.readFileSync(TASKS_FILE, "utf-8");
     const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      // File exists but has wrong structure — back up before overwriting
+      console.error("[tasks] tasks.json has invalid structure (not an array), backing up");
+      try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
+      return [];
+    }
     return parsed;
-  } catch {
+  } catch (err: any) {
+    if (err.code === "ENOENT") {
+      // File doesn't exist yet — normal on first run
+      return [];
+    }
+    // Parse error or other read error — file may be corrupted
+    console.error(`[tasks] Failed to read tasks.json: ${err.message}. Backing up corrupt file.`);
+    try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
     return [];
   }
 }

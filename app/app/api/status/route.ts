@@ -71,6 +71,9 @@ function getGitInfo(): { branch: string; lastCommit: string; lastCommitDate: str
   }
 }
 
+// Only allow safe characters in launchd labels to prevent shell injection
+const SAFE_LABEL_RE = /^[a-zA-Z0-9._-]+$/;
+
 function getLaunchdJobs(): { name: string; loaded: boolean }[] {
   const launchdDir = join(PROJECT_ROOT, "launchd");
   if (!existsSync(launchdDir)) return [];
@@ -80,6 +83,11 @@ function getLaunchdJobs(): { name: string; loaded: boolean }[] {
     const files = readdirSync(launchdDir).filter((f) => f.endsWith(".plist"));
     for (const file of files) {
       const label = file.replace(".plist", "");
+      // Skip labels with unsafe characters to prevent shell injection
+      if (!SAFE_LABEL_RE.test(label)) {
+        console.warn(`[status] Skipping plist with unsafe label: ${file}`);
+        continue;
+      }
       let loaded = false;
       try {
         execSync(`launchctl list ${label}`, { stdio: "pipe" });
