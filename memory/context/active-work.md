@@ -7,13 +7,12 @@
 - **Status:** Core features complete, polish phase
 
 ## What's Done (Recent)
+- Working directory persistence — Selection saved to localStorage, restored on page reload (Feb 1)
+- Automation execution queue — POST /api/automations/{name} queues prompts, server executes on next message (Feb 1)
+- Responsive task polling — Reduced from 3s to 1s, auto-eval tasks visible within 1s (Feb 1)
 - Task-to-chat action — "Chat" button on tasks sends title + description to Claude as a message
 - Keyboard shortcuts overlay — Cmd+/ toggles grouped shortcut reference panel, linked from input footer
 - Backend hardening v3 — Directory validation, symlink protection, stale task cleanup
-- Frontend polish — aria-live status bar, responsive directory label, editor Tab key support
-- Task priorities — High/normal/low with red border highlights, sorting, click-to-cycle
-- Responsive layout — Auto-collapse sidebars under 1024px, icon-only tabs on mobile
-- Eval task deduplication — Skips duplicate needs_testing tasks for same eval type
 
 ## Next Steps
 - Approval buttons for tool use

@@ -17,6 +17,8 @@
 - Memory API needs path traversal guards — `realpath` check against memory directory
 - WebSocket message fields (sessionId, directory) must be validated before use in CLI args — injection vector
 - Long-running `claude --print` processes need stdout buffer caps (5MB) and safety timeouts (10min) to prevent memory exhaustion
+- **Feb 1:** Automation queue system works well for inter-process communication — launchd curl triggers can queue prompts, server executes asynchronously on next WebSocket event
+- **Feb 1:** localStorage persists UI state (cwd, session history) reliably across page reloads — use for non-critical, user-facing preferences
 
 ## About Abe
 
