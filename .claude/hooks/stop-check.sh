@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop hook: verifies build passes and dev server is healthy.
+# Stop hook: verifies dev server is healthy. If not, builds and starts it.
 # Returns {"decision": "block", "reason": "..."} to force continuation.
 # Returns {} to allow stopping.
 
@@ -22,26 +22,23 @@ REASONS=""
 if [ -d "$APP_DIR" ]; then
   cd "$APP_DIR"
 
-  # Check 1: Does the build pass?
-  # Check output for success markers rather than exit code,
-  # since @next/swc mismatch warnings cause non-zero exit.
-  BUILD_OUTPUT=$(npx next build 2>&1)
+  # Check: Is dev server responding with 200?
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
 
-  if echo "$BUILD_OUTPUT" | grep -q "Compiled successfully"; then
-    if echo "$BUILD_OUTPUT" | grep -q "Build error"; then
-      REASONS="${REASONS}Build has errors — check build output. "
+  if [ "$HTTP_CODE" = "200" ]; then
+    # Server healthy — do a TypeScript check only (no build, avoids corrupting .next)
+    TS_OUTPUT=$(npx tsc --noEmit 2>&1)
+    if [ $? -ne 0 ]; then
+      REASONS="${REASONS}TypeScript errors found — fix before stopping. "
     fi
   else
-    REASONS="${REASONS}Build is failing — fix build errors. "
-  fi
+    # Server not healthy — try build + start
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    sleep 1
 
-  # Check 2: Is dev server responding? Don't kill it — just check.
-  if [ -z "$REASONS" ]; then
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
-    if [ "$HTTP_CODE" != "200" ]; then
-      # Server not running — start it
-      lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-      sleep 1
+    BUILD_OUTPUT=$(npx next build 2>&1)
+    if echo "$BUILD_OUTPUT" | grep -q "Compiled successfully"; then
+      # Build OK — start dev server
       npm run dev > /dev/null 2>&1 &
       DEV_PID=$!
 
@@ -59,8 +56,9 @@ if [ -d "$APP_DIR" ]; then
         kill $DEV_PID 2>/dev/null || true
         REASONS="${REASONS}Dev server failed to start — localhost:3000 not responding. "
       fi
+    else
+      REASONS="${REASONS}Build is failing — fix build errors. "
     fi
-    # Server already running and healthy — leave it alone
   fi
 fi
 
