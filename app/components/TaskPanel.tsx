@@ -76,7 +76,7 @@ export function LeftTaskPanel() {
             type="submit"
             disabled={!newTitle.trim()}
             aria-label="Add task"
-            className="bg-emerald-500/80 text-white px-2.5 py-1.5 rounded-lg text-sm hover:bg-emerald-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-200 shadow-sm shadow-emerald-500/15 disabled:shadow-none"
+            className="bg-emerald-500/80 text-white px-2.5 py-1.5 rounded-lg text-sm hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-sm shadow-emerald-500/15 disabled:shadow-none"
           >
             +
           </button>
@@ -199,7 +199,7 @@ function TaskItem({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-150">
+        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-150">
           {task.status !== "completed" && (
             <button
               onClick={() => onAdvance(task.id)}

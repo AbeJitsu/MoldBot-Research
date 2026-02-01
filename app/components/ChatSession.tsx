@@ -929,7 +929,7 @@ export default function ChatSession() {
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim() || !isReady}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-emerald-500/90 text-white p-1.5 hover:bg-emerald-500 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:shadow-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-emerald-500/90 text-white p-1.5 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:shadow-none"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />

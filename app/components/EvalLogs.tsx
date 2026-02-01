@@ -159,12 +159,24 @@ export default function EvalLogs() {
                 {isExpanded && (
                   <div className="border-t border-white/[0.06] px-4 py-3" style={{ background: "var(--surface-2)" }}>
                     <div className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Changes</div>
-                    <pre
-                      className="text-xs text-gray-400 whitespace-pre-wrap overflow-x-auto max-h-60 overflow-y-auto"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      {entry.diffSummary || "No changes recorded"}
-                    </pre>
+                    {entry.diffSummary ? (
+                      <pre
+                        className="text-xs whitespace-pre-wrap overflow-x-auto max-h-60 overflow-y-auto rounded-md border border-white/[0.06] p-2.5"
+                        style={{ background: "var(--surface-0)", fontFamily: "var(--font-mono)" }}
+                      >
+                        {entry.diffSummary.split("\n").map((line, i) => {
+                          let color = "text-gray-400";
+                          if (line.startsWith("+++") || line.startsWith("---")) color = "text-gray-500 font-medium";
+                          else if (line.startsWith("+")) color = "text-emerald-400";
+                          else if (line.startsWith("-")) color = "text-red-400";
+                          else if (line.startsWith("@@")) color = "text-blue-400";
+                          else if (line.startsWith("diff ")) color = "text-gray-300 font-medium";
+                          return <div key={i} className={color}>{line || " "}</div>;
+                        })}
+                      </pre>
+                    ) : (
+                      <p className="text-xs text-gray-600">No changes recorded</p>
+                    )}
                     <div className="mt-3 flex items-center gap-4 text-xs text-gray-600" style={{ fontFamily: "var(--font-mono)" }}>
                       <span>ID: {entry.id.slice(0, 8)}</span>
                       <span>Commit: {entry.commitHash.slice(0, 12)}</span>
