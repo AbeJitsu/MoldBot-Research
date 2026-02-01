@@ -168,6 +168,23 @@ export function createTask(
         console.log(`[tasks] Auto-purged ${toRemove.size} oldest completed tasks (was at limit of ${MAX_TASKS})`);
       }
 
+      // If still at limit, purge stale needs_testing tasks older than 7 days
+      if (tasks.length >= MAX_TASKS) {
+        const STALE_THRESHOLD = 7 * 24 * 60 * 60 * 1000; // 7 days
+        const now = Date.now();
+        const staleNeedsTesting = tasks
+          .filter((t) => t.status === "needs_testing" && (now - new Date(t.createdAt).getTime()) > STALE_THRESHOLD)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+        if (staleNeedsTesting.length > 0) {
+          const toRemove = new Set(
+            staleNeedsTesting.slice(0, Math.min(PURGE_BATCH, staleNeedsTesting.length)).map((t) => t.id)
+          );
+          tasks = tasks.filter((t) => !toRemove.has(t.id));
+          console.log(`[tasks] Auto-purged ${toRemove.size} stale needs_testing tasks (older than 7 days)`);
+        }
+      }
+
       // If still at limit after purge (all active tasks), reject
       if (tasks.length >= MAX_TASKS) {
         throw new Error(`Task limit reached (${MAX_TASKS}). Delete old tasks first.`);

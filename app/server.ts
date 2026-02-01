@@ -3,7 +3,7 @@ import { parse } from "url";
 import next from "next";
 import { WebSocketServer, WebSocket } from "ws";
 import { spawn, ChildProcess, execSync } from "child_process";
-import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync } from "fs";
+import { readFileSync, writeFileSync, renameSync, existsSync, readdirSync, statSync, lstatSync } from "fs";
 import { join } from "path";
 import crypto from "crypto";
 
@@ -237,8 +237,10 @@ function collectMdFiles(dir: string): string[] {
   try {
     for (const entry of readdirSync(dir)) {
       const fullPath = join(dir, entry);
-      const stat = statSync(fullPath);
-      if (stat.isDirectory()) {
+      // Skip symlinks to prevent directory traversal outside memory/
+      const lstat = lstatSync(fullPath);
+      if (lstat.isSymbolicLink()) continue;
+      if (lstat.isDirectory()) {
         results.push(...collectMdFiles(fullPath));
       } else if (entry.endsWith(".md")) {
         results.push(fullPath);
@@ -757,16 +759,22 @@ app.prepare().then(() => {
             ws.send(JSON.stringify({ type: "error", message: "Invalid directory path" }));
             return;
           }
-          if (existsSync(target)) {
-            chatCwds.set(ws, target);
-            saveLastCwd(target);
-            chatSessions.set(ws, null);
-            const branch = getGitBranch(target);
-            const evalRunningNow = !!serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null;
-            ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining }));
-          } else {
+          try {
+            const targetStat = statSync(target);
+            if (!targetStat.isDirectory()) {
+              ws.send(JSON.stringify({ type: "error", message: `Not a directory: ${target}` }));
+              return;
+            }
+          } catch {
             ws.send(JSON.stringify({ type: "error", message: `Directory not found: ${target}` }));
+            return;
           }
+          chatCwds.set(ws, target);
+          saveLastCwd(target);
+          chatSessions.set(ws, null);
+          const branch = getGitBranch(target);
+          const evalRunningNow = !!serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null;
+          ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining }));
         } else if (parsed.type === "set_auto_eval") {
           serverAutoEvalEnabled = !!parsed.enabled;
           saveAutoEvalEnabled(serverAutoEvalEnabled);
