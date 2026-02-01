@@ -99,7 +99,7 @@ export default function EvalLogs() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-sm text-gray-600 text-center py-12">
+        <div className="text-sm text-gray-500 text-center py-12">
           {logs.length === 0
             ? "No eval runs yet. Enable auto-eval or trigger one manually."
             : "No runs matching this filter."}
@@ -175,7 +175,7 @@ export default function EvalLogs() {
                         })}
                       </pre>
                     ) : (
-                      <p className="text-xs text-gray-600">No changes recorded</p>
+                      <p className="text-xs text-gray-500">No changes recorded</p>
                     )}
                     <div className="mt-3 flex items-center gap-4 text-xs text-gray-600" style={{ fontFamily: "var(--font-mono)" }}>
                       <span>ID: {entry.id.slice(0, 8)}</span>

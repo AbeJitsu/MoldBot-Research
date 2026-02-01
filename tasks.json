@@ -118,5 +118,33 @@
     "status": "completed",
     "createdAt": "2026-02-01T18:41:14.372Z",
     "summary": "What: backend improvements across 5 files\nWhy: Automatic backend quality pass\nHow: +109 -4 lines changed\n\n.auto-eval-index                |  2 +-\n app/app/api/tasks/task-store.ts | 26 ++++++++++++++++++++++++--\n app/server.ts                   | 37 ++++++++++++++++++++++++++++++++++++-\n eval-log.json                   | 27 +++++++++++++++++++++++++++\n tasks.json                      | 21 +++++++++++++++++++++\n 5 files changed, 109 insertions(+), 4 deletions(-)"
+  },
+  {
+    "id": "742ae0ce-314c-48f5-845f-a0e77491ffb2",
+    "title": "[Auto-eval] Functionality eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:45:14.930Z",
+    "summary": "What: functionality improvements across 6 files\nWhy: Automatic functionality quality pass\nHow: +224 -14 lines changed\n\napp/app/api/tasks/clear-completed/route.ts |  16 ++++\n app/app/api/tasks/task-store.ts            |  13 ++++\n app/components/ChatSession.tsx             |  30 ++++++++\n app/components/TaskPanel.tsx               | 115 +++++++++++++++++++++++++----\n eval-log.json                              |  36 +++++++++\n tasks.json                                 |  28 +++++++\n 6 files changed, 224 insertions(+), 14 deletions(-)"
+  },
+  {
+    "id": "6f8e2224-612d-481a-ac1a-a543e0360d86",
+    "title": "[Auto-eval] Memory eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:47:20.174Z",
+    "summary": "What: memory improvements across 8 files\nWhy: Automatic memory quality pass\nHow: +49 -14 lines changed\n\n.auto-eval-index              |  2 +-\n CLAUDE.md                     |  3 ++-\n app/CLAUDE.md                 | 10 +++++-----\n eval-log.json                 |  9 +++++++++\n memory/context/active-work.md | 13 +++++++------\n memory/context/decisions.md   | 10 ++++++++++\n roadmap.md                    |  9 ++++++++-\n tasks.json                    |  7 +++++++\n 8 files changed, 49 insertions(+), 14 deletions(-)"
+  },
+  {
+    "id": "a65d1a0f-e6ab-4a41-b078-5b5b85d238c0",
+    "title": "[Auto-eval] Frontend eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:49:58.668Z",
+    "summary": "What: frontend improvements across 5 files\nWhy: Automatic frontend quality pass\nHow: +136 -25 lines changed\n\n.auto-eval-index               |  2 +-\n app/components/Automations.tsx | 49 ++++++++++++++++++++------\n app/components/ChatSession.tsx | 78 +++++++++++++++++++++++++++++++++++-------\n eval-log.json                  | 18 ++++++++++\n tasks.json                     | 14 ++++++++\n 5 files changed, 136 insertions(+), 25 deletions(-)"
+  },
+  {
+    "id": "8b25a3d4-3f07-4cf9-b37b-57e7901e2085",
+    "title": "[Auto-eval] Backend eval completed",
+    "status": "completed",
+    "createdAt": "2026-02-01T18:52:15.307Z",
+    "summary": "What: backend improvements across 6 files\nWhy: Automatic backend quality pass\nHow: +83 -4 lines changed\n\n.auto-eval-index                          |  2 +-\n app/app/api/memory/[...filepath]/route.ts | 13 ++++++++++++-\n app/app/api/status/route.ts               |  8 ++++++++\n app/app/api/tasks/task-store.ts           | 16 ++++++++++++++--\n eval-log.json                             | 27 +++++++++++++++++++++++++++\n tasks.json                                | 21 +++++++++++++++++++++\n 6 files changed, 83 insertions(+), 4 deletions(-)"
   }
 ]

@@ -220,7 +220,7 @@ body {
 
 /* Input focus glow */
 .input-glow:focus {
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15), 0 0 20px rgba(52, 211, 153, 0.05);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.3), 0 0 20px rgba(52, 211, 153, 0.1);
 }
 
 /* ============================================

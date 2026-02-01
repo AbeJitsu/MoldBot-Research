@@ -52,7 +52,7 @@ export function LeftTaskPanel() {
           <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} onRename={renameTask} />
         ))}
         {pending.length === 0 && (
-          <p className="text-xs text-gray-600 px-2 py-6 text-center">No pending tasks</p>
+          <p className="text-xs text-gray-500 px-2 py-6 text-center">No pending tasks</p>
         )}
       </div>
 
@@ -108,7 +108,7 @@ export function RightTaskPanel() {
           <TaskItem key={task.id} task={task} onAdvance={advanceTask} onDelete={deleteTask} onRename={renameTask} />
         ))}
         {needsTesting.length === 0 && (
-          <p className="text-xs text-gray-600 px-2 py-6 text-center">Nothing to test</p>
+          <p className="text-xs text-gray-500 px-2 py-6 text-center">Nothing to test</p>
         )}
       </div>
 

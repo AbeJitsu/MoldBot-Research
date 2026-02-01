@@ -101,7 +101,7 @@ export default function Automations({ onSendToTerminal, onSendToChat }: Automati
       </div>
 
       {automations.length === 0 && (
-        <div className="text-sm text-gray-600 text-center py-12">
+        <div className="text-sm text-gray-500 text-center py-12">
           No automations found. Add prompt templates to <code className="text-gray-400" style={{ fontFamily: 'var(--font-mono)' }}>automations/</code>
         </div>
       )}
@@ -199,8 +199,8 @@ function CurlExample({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
-    <div
-      className="group flex items-center gap-2 text-xs text-gray-500 rounded-md px-2.5 py-1.5 border border-white/[0.04] hover:border-white/[0.08] transition-all duration-150 cursor-pointer"
+    <button
+      className="group flex items-center gap-2 text-xs text-gray-500 rounded-md px-2.5 py-1.5 border border-white/[0.04] hover:border-white/[0.08] transition-all duration-150 cursor-pointer w-full text-left"
       style={{ background: "var(--surface-2)", fontFamily: "var(--font-mono)" }}
       onClick={() => {
         navigator.clipboard.writeText(command);
@@ -220,6 +220,6 @@ function CurlExample({ command }: { command: string }) {
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
         </svg>
       )}
-    </div>
+    </button>
   );
 }

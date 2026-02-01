@@ -163,7 +163,7 @@ export default function Status() {
       {/* Memory Files */}
       <Section title={`Memory Files (${data.memoryFiles.length})`}>
         {data.memoryFiles.length === 0 ? (
-          <div className="text-sm text-gray-600 text-center py-4">No memory files found.</div>
+          <div className="text-sm text-gray-500 text-center py-4">No memory files found.</div>
         ) : (
           <div className="border border-white/[0.06] rounded-lg divide-y divide-white/[0.04] overflow-hidden" style={{ background: "var(--surface-2)" }}>
             {data.memoryFiles.map((file) => (
@@ -184,7 +184,7 @@ export default function Status() {
       {/* launchd Jobs */}
       <Section title="Scheduled Jobs">
         {data.launchdJobs.length === 0 ? (
-          <div className="text-sm text-gray-600 text-center py-4">No launchd plists found.</div>
+          <div className="text-sm text-gray-500 text-center py-4">No launchd plists found.</div>
         ) : (
           <div className="border border-white/[0.06] rounded-lg divide-y divide-white/[0.04] overflow-hidden" style={{ background: "var(--surface-2)" }}>
             {data.launchdJobs.map((job) => (
@@ -222,7 +222,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function InfoCard({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="rounded-lg border border-white/[0.06] px-3 py-2.5" style={{ background: "var(--surface-2)" }}>
-      <div className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1">{label}</div>
+      <div className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-1">{label}</div>
       <div className={`text-sm font-medium ${valueClass || "text-gray-200"}`} style={{ fontFamily: "var(--font-mono)" }}>
         {value}
       </div>
