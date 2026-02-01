@@ -186,24 +186,28 @@ function describeChangedFiles(diffSummary: string): string {
   return areas.slice(0, 3).join(", ") + ` and ${areas.length - 3} more`;
 }
 
-function createEvalTask(evalType: string, diffSummary: string): void {
+function buildEvalSummary(evalType: string, diffSummary: string): string {
   const fileLines = diffSummary.split("\n").filter((l) => l.includes("|"));
   const fileCount = fileLines.length;
   const insertions = diffSummary.match(/(\d+) insertion/)?.[1] || "0";
   const deletions = diffSummary.match(/(\d+) deletion/)?.[1] || "0";
   const changedAreas = describeChangedFiles(diffSummary);
-
   const evalLabel = evalType.charAt(0).toUpperCase() + evalType.slice(1);
-  const summary = [
+
+  return [
     `What: ${evalLabel} quality pass — updated ${changedAreas}`,
     `Why: Automatic ${evalType} improvements to keep code clean and polished`,
     `How: ${fileCount} file${fileCount !== 1 ? "s" : ""} changed (+${insertions} -${deletions} lines)`,
   ].join("\n");
-  const title = `[Auto-eval] ${evalLabel} eval completed`;
+}
 
-  // Direct task-store call instead of self-HTTP — avoids network hop and silent failures
+function createEvalTask(evalType: string, diffSummary: string): void {
+  const evalLabel = evalType.charAt(0).toUpperCase() + evalType.slice(1);
+  const summary = buildEvalSummary(evalType, diffSummary);
+  const title = `[Auto-eval] ${evalLabel} eval needs review`;
+
   import("./app/api/tasks/task-store").then(({ createTask }) => {
-    return createTask(title, { status: "completed", summary });
+    return createTask(title, { status: "needs_testing", summary });
   }).then(() => {
     console.log(`[auto-eval] Created task: ${title}`);
   }).catch((err: Error) => {
@@ -427,6 +431,17 @@ app.prepare().then(() => {
     currentEvalType = evalType;
     saveEvalIndex((evalIndex + 1) % EVAL_TYPES.length);
 
+    // Create pending task for this eval run
+    let evalTaskId: string | null = null;
+    const evalLabel = evalType.charAt(0).toUpperCase() + evalType.slice(1);
+    import("./app/api/tasks/task-store").then(({ createTask }) => {
+      return createTask(`[Auto-eval] ${evalLabel} eval running...`, { status: "pending" });
+    }).then((task) => {
+      evalTaskId = task.id;
+    }).catch((err: Error) => {
+      console.error(`[auto-eval] Failed to create pending task: ${err.message}`);
+    });
+
     // Notify connected clients
     broadcastToChat({ type: "auto_eval_start", branch: branchName, evalType });
 
@@ -563,8 +578,21 @@ app.prepare().then(() => {
         broadcastToChat({ type: "error", message: `Auto-eval exited with code ${code}` });
       }
 
-      // Create completed task with summary (only on success)
-      if (completedEvalType && exitedCleanly) {
+      // Update eval task: pending → needs_testing with summary (for user to review)
+      if (completedEvalType && evalTaskId) {
+        const evalSummary = buildEvalSummary(completedEvalType, summary);
+        const evalTitle = `[Auto-eval] ${completedEvalType.charAt(0).toUpperCase() + completedEvalType.slice(1)} eval ${exitedCleanly ? "needs review" : "failed"}`;
+        import("./app/api/tasks/task-store").then(({ updateTask }) => {
+          return updateTask(evalTaskId!, {
+            title: evalTitle,
+            status: exitedCleanly ? "needs_testing" : "completed",
+            summary: evalSummary,
+          });
+        }).catch((err: Error) => {
+          console.error(`[auto-eval] Failed to update task: ${err.message}`);
+        });
+      } else if (completedEvalType && exitedCleanly) {
+        // Fallback: create as needs_testing if we lost the task ID
         createEvalTask(completedEvalType, summary);
       }
 
