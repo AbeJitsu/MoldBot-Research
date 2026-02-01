@@ -9,12 +9,26 @@ interface Task {
   createdAt: string;
 }
 
+// Brief error flash for failed task operations
+let errorMessage: string | null = null;
+let errorTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function setError(msg: string) {
+  errorMessage = msg;
+  notify();
+  if (errorTimeout) clearTimeout(errorTimeout);
+  errorTimeout = setTimeout(() => {
+    errorMessage = null;
+    notify();
+  }, 3000);
+}
+
 // ============================================
 // TASK PANEL — Left sidebar (Pending)
 // ============================================
 
 export function LeftTaskPanel() {
-  const { tasks, addTask, advanceTask, deleteTask } = useTasks();
+  const { tasks, error, addTask, advanceTask, deleteTask } = useTasks();
   const [newTitle, setNewTitle] = useState("");
 
   const pending = tasks.filter((t) => t.status === "pending");
@@ -41,6 +55,11 @@ export function LeftTaskPanel() {
         )}
       </div>
 
+      {error && (
+        <div className="mx-2 mb-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
+          {error}
+        </div>
+      )}
       <form onSubmit={handleAdd} className="p-2 border-t border-white/[0.06]">
         <div className="flex gap-1.5">
           <input
@@ -244,10 +263,13 @@ function useTasks() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
+      if (!res.ok) throw new Error("Failed to add task");
       const task = await res.json();
       globalTasks = [...globalTasks, task];
       notify();
-    } catch {}
+    } catch {
+      setError("Failed to add task");
+    }
   }, []);
 
   const advanceTask = useCallback(async (id: string) => {
@@ -262,25 +284,43 @@ function useTasks() {
     const newStatus = nextStatus[task.status];
     if (newStatus === task.status) return;
 
+    // Optimistic update
+    const previous = [...globalTasks];
+    globalTasks = globalTasks.map((t) => (t.id === id ? { ...t, status: newStatus as Task["status"] } : t));
+    notify();
+
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) throw new Error("Failed to update task");
       const updated = await res.json();
       globalTasks = globalTasks.map((t) => (t.id === id ? updated : t));
       notify();
-    } catch {}
+    } catch {
+      globalTasks = previous;
+      notify();
+      setError("Failed to update task");
+    }
   }, []);
 
   const deleteTask = useCallback(async (id: string) => {
+    // Optimistic update
+    const previous = [...globalTasks];
+    globalTasks = globalTasks.filter((t) => t.id !== id);
+    notify();
+
     try {
-      await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-      globalTasks = globalTasks.filter((t) => t.id !== id);
+      const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete task");
+    } catch {
+      globalTasks = previous;
       notify();
-    } catch {}
+      setError("Failed to delete task");
+    }
   }, []);
 
-  return { tasks: globalTasks, addTask, advanceTask, deleteTask };
+  return { tasks: globalTasks, error: errorMessage, addTask, advanceTask, deleteTask };
 }
