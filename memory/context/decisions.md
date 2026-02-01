@@ -45,30 +45,10 @@
 - **Reason:** Terminal tab is legacy; the old flow told users to paste into a terminal that doesn't exist in the chat-first UI
 - **Trade-off:** None — strictly better UX
 
-## 2026-02-01: Shell injection guard on status route
-- **Decision:** Validate launchd plist labels against safe character regex before passing to execSync
-- **Reason:** Status route was passing user-controllable filenames to shell commands without sanitization
-- **Trade-off:** Rejects plist labels with unusual characters (acceptable)
-
-## 2026-02-01: Rate limiting and temp file cleanup
-- **Decision:** Added rate limiting to API routes and automatic temp file cleanup on server startup
-- **Reason:** Prevent abuse of API endpoints; temp files from crashed eval runs accumulated over time
-- **Trade-off:** None — defensive hardening with no UX impact
-
-## 2026-02-01: Direct task creation from server
-- **Decision:** Server can create tasks directly in task-store without going through HTTP API
-- **Reason:** Auto-eval and internal server operations needed to create tasks without self-referencing the API
-- **Trade-off:** Two code paths for task creation (API + direct) — acceptable since task-store is the shared layer
-
-## 2026-02-01: execSync timeouts on all shell commands
-- **Decision:** Added explicit timeout (5-10s) to all execSync calls in API routes
-- **Reason:** Shell commands (git, launchctl) could hang indefinitely, blocking the event loop
-- **Trade-off:** Commands that legitimately take longer will fail — acceptable for status checks
-
-## 2026-02-01: Task descriptions
-- **Decision:** Added optional description field to tasks in TaskPanel
-- **Reason:** Task titles alone were insufficient for tracking context on what needs to be done
-- **Trade-off:** Slightly more complex task UI
+## 2026-02-01: Backend hardening batch
+- **Decisions:** Shell injection guards (regex validation on plist labels, session IDs), rate limiting, temp file cleanup, execSync timeouts (5-10s), direct task creation from server (bypasses HTTP self-call)
+- **Reason:** Security hardening and reliability — prevent injection, resource leaks, and event loop blocking
+- **Trade-off:** Two code paths for task creation (API + direct); commands >10s will timeout
 
 ## 2026-02-01: Collapsible task panels
 - **Decision:** Task sidebars collapse via chevron toggle, expanding chat area to full width
@@ -94,3 +74,13 @@
 - **Decision:** "Done all" button + `/api/tasks/advance-all` for batch status transitions
 - **Reason:** Auto-eval creates many tasks; advancing one-by-one was tedious
 - **Trade-off:** None — optional bulk action alongside individual controls
+
+## 2026-02-01: Task priorities
+- **Decision:** Added high/normal/low priority to tasks with visual indicators and sorting
+- **Reason:** Not all tasks are equal; needed a way to flag what matters most
+- **Trade-off:** Slightly more complex task schema and UI
+
+## 2026-02-01: Eval task deduplication
+- **Decision:** Server checks for existing needs_testing task of same eval type before creating a new one
+- **Reason:** Auto-eval cycles were creating duplicate tasks when previous ones weren't reviewed yet
+- **Trade-off:** None — pure correctness fix

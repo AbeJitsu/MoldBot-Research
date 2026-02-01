@@ -112,6 +112,12 @@
 - **Bulk task operations** — "Done all" button + `/api/tasks/advance-all` for batch status transitions
 - **Auto-scroll lock** — Smart scroll detection pauses auto-scroll when user scrolls up, "Scroll to bottom" pill to resume
 - **Process safety** — 5MB stdout buffer cap, 10-min hung process timeout, prevents unbounded memory growth
+- **Task priorities** — High/normal/low with red border highlights, sorting, click-to-cycle button
+- **Responsive layout** — Auto-collapse sidebars under 1024px, icon-only tabs on mobile, wrapped navigation
+- **Eval task deduplication** — Server skips duplicate needs_testing tasks for same eval type
+- **Scroll-to-bottom always visible** — Appears whenever user scrolls up, not just during streaming
+- **Tool card a11y** — aria-expanded/aria-label on expand/collapse buttons
+- **Memory editor empty state** — Placeholder when no memory files exist
 
 ### Dashboard
 - **Memory editor** — Sidebar file browser, monospace editor, Cmd+S save, unsaved indicator
@@ -134,7 +140,7 @@
 - ~~Log viewer for automation run history~~ — **Built** (Eval Logs tab)
 - ~~Status page (launchd jobs, server health, memory timestamps)~~ — **Built** (Status tab)
 - ~~Error states and reconnection UX~~ — **Built** (disconnect banner, retry button, auto-reconnect)
-- Responsive layout refinements
+- ~~Responsive layout refinements~~ — **Built** (auto-collapse sidebars, icon-only tabs, wrapped nav)
 
 ### Enhanced Chat UX
 - ~~File diff viewer for edit tool results~~ — **Built** (side-by-side old/new in tool cards)
@@ -168,7 +174,7 @@
 
 ### Advanced Features
 - ~~Task descriptions~~ — **Built** (optional description field)
-- Task priorities
+- ~~Task priorities~~ — **Built** (high/normal/low with visual indicators and sorting)
 - Task-to-chat linking (reference tasks in conversations)
 - Automation scheduling from the UI
 - Notification system for completed automations

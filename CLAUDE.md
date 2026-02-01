@@ -59,10 +59,17 @@
 - **Bulk task operations** — "Done all" button advances all needs_testing tasks at once, `/api/tasks/advance-all` endpoint
 - **Auto-scroll lock** — Chat pauses auto-scroll when user scrolls up during streaming, "Scroll to bottom" pill to resume
 - **Process safety** — 5MB stdout buffer cap on chat/eval processes, 10-min timeout on hung chat processes
+- **Task priorities** — High/normal/low priority with red border highlights, sorting, click-to-cycle button
+- **Responsive layout** — Auto-collapse sidebars under 1024px, icon-only tabs on mobile, wrapped navigation
+- **Eval task deduplication** — Skips creating needs_testing task when duplicate exists; race condition fix in close handler
+- **Scroll-to-bottom always visible** — Button appears whenever user scrolls up, not just during streaming
+- **Tool card a11y** — aria-expanded and aria-label on expand/collapse buttons
+- **Memory editor empty state** — Placeholder when no files exist
+- **Connection cleanup** — Rate limit counters cleaned on stale connections
 - **Build passes** — `next build` clean, dev server runs on localhost:3000, all APIs tested
 
 ### What's Left
-- **Polish** — Design system refinements, responsive layout
+- **Polish** — Design system refinements
 
 ## Architecture
 

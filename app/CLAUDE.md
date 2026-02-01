@@ -18,8 +18,7 @@
 - `lib/auth.ts` — Authentication middleware for API routes.
 
 ### Polish Remaining
-- Responsive layout refinements
-- File diff viewer for edit tool results
+- Code syntax highlighting in markdown
 
 ## Key Architecture
 
@@ -40,6 +39,7 @@
 | `/api/tasks` | GET/POST | List/create tasks |
 | `/api/tasks/[id]` | PUT/DELETE | Update/delete task |
 | `/api/tasks/clear-completed` | POST | Remove all completed tasks |
+| `/api/tasks/advance-all` | POST | Bulk advance tasks between statuses |
 | `/api/directories` | GET | List project directories |
 | `/api/eval-logs` | GET | Auto-eval run history |
 | `/api/status` | GET | Server health, git, eval config, launchd |
