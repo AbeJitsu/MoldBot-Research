@@ -1363,5 +1363,157 @@
     "status": "needs_testing",
     "createdAt": "2026-02-02T00:10:59.849Z",
     "summary": "What: Frontend quality pass — updated .auto-eval-index, styles, page and 8 more\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 13 files changed (+5380 -32 lines)"
+  },
+  {
+    "id": "eff2dfb4-4add-4277-9d70-fda6320d837c",
+    "title": "[Auto-eval] Backend eval running...",
+    "status": "pending",
+    "createdAt": "2026-02-02T00:30:55.558Z"
+  },
+  {
+    "id": "5fa7a266-6c2d-4767-85a6-b121d38669fd",
+    "title": "[Auto-eval] Functionality eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:01:06.371Z",
+    "summary": "What: Functionality quality pass — updated cron API, error, global-error and 2 more\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 6 files changed (+1104 -18 lines)"
+  },
+  {
+    "id": "f2b98013-2543-48f5-8461-a45f7d3b05ca",
+    "title": "[Auto-eval] Memory eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:09:28.084Z",
+    "summary": "What: Memory quality pass — updated docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 4 files changed (+141 -0 lines)"
+  },
+  {
+    "id": "bb1d91aa-cdb2-4006-afbb-70ceff306c77",
+    "title": "[Auto-eval] Frontend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:11:19.009Z",
+    "summary": "What: Frontend quality pass — updated Button, Footer, Navigation and 2 more\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 5 files changed (+38 -22 lines)"
+  },
+  {
+    "id": "b958bd2f-3e87-4ffc-825d-e9dade4e5e19",
+    "title": "[Auto-eval] Backend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:15:10.204Z",
+    "summary": "What: Backend quality pass — updated docs\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 1 file changed (+224 -0 lines)"
+  },
+  {
+    "id": "f7faf5f4-93b3-481e-87e9-6e7cb5a8c730",
+    "title": "[Auto-eval] Functionality eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:21:11.859Z",
+    "summary": "What: Functionality quality pass — updated page, admin API, medusa-client\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 3 files changed (+354 -41 lines)"
+  },
+  {
+    "id": "e1a6c2df-c40c-4398-a6d7-c686917cf193",
+    "title": "[Auto-eval] Memory eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:27:22.434Z",
+    "summary": "What: Memory quality pass — updated docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 4 files changed (+122 -63 lines)"
+  },
+  {
+    "id": "a0963cb2-6c96-4dde-be2b-18e75ade036a",
+    "title": "[Auto-eval] Frontend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:29:53.216Z",
+    "summary": "What: Frontend quality pass — updated Button, Footer, Navigation and 1 more\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 4 files changed (+46 -25 lines)"
+  },
+  {
+    "id": "eaf4c6eb-fb87-4b10-a285-53d51552a28b",
+    "title": "[Auto-eval] Backend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:33:04.171Z",
+    "summary": "What: Backend quality pass — updated admin API, projects API, stripe API and 3 more\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 6 files changed (+461 -25 lines)"
+  },
+  {
+    "id": "19ed73b8-354f-4bb9-94b7-f534111276a4",
+    "title": "[Auto-eval] Functionality eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:38:06.144Z",
+    "summary": "What: Functionality quality pass — updated page, admin API, AdminSidebar and 1 more\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 6 files changed (+1240 -0 lines)"
+  },
+  {
+    "id": "8a24367f-282c-4665-90a1-4209d9a471db",
+    "title": "[Auto-eval] Memory eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:47:39.215Z",
+    "summary": "What: Memory quality pass — updated docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 4 files changed (+106 -42 lines)"
+  },
+  {
+    "id": "4c3680a2-60e1-4b0c-bffd-ad09987bf828",
+    "title": "[Auto-eval] Frontend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:50:36.437Z",
+    "summary": "What: Frontend quality pass — updated Footer, Navigation, home\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 3 files changed (+10 -10 lines)"
+  },
+  {
+    "id": "1bb3d5cc-27a6-4ea3-a165-7afaca315535",
+    "title": "[Auto-eval] Backend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:53:24.555Z",
+    "summary": "What: Backend quality pass — updated appointments API, enrollments API, projects API and 3 more\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 6 files changed (+564 -73 lines)"
+  },
+  {
+    "id": "d53f2547-29d9-4a77-9f2e-6b6fe3f6a973",
+    "title": "[Auto-eval] Functionality eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T01:58:43.419Z",
+    "summary": "What: Functionality quality pass — updated page\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 1 file changed (+60 -9 lines)"
+  },
+  {
+    "id": "3bf626a4-499a-4634-a08d-adbedcd79aa1",
+    "title": "[Auto-eval] Memory eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:03:21.092Z",
+    "summary": "What: Memory quality pass — updated docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 5 files changed (+124 -29 lines)"
+  },
+  {
+    "id": "69f00db2-c462-4ad9-8982-fc882dbbba4e",
+    "title": "[Auto-eval] Frontend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:06:27.878Z",
+    "summary": "What: Frontend quality pass — updated Button, Footer, Navigation and 2 more\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 5 files changed (+53 -17 lines)"
+  },
+  {
+    "id": "c9cc1906-0e05-4772-bba3-c8727d43a531",
+    "title": "[Auto-eval] Backend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:09:57.128Z",
+    "summary": "What: Backend quality pass — updated chat API, checkout API, redis and 1 more\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 4 files changed (+202 -9 lines)"
+  },
+  {
+    "id": "3cf0803e-d7c5-44a8-afa9-53688c6cf8e9",
+    "title": "[Auto-eval] Functionality eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:14:19.489Z",
+    "summary": "What: Functionality quality pass — updated page, admin API, google API\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 5 files changed (+495 -17 lines)"
+  },
+  {
+    "id": "7b64f7e3-9b7e-4369-ad0a-3705bc64152f",
+    "title": "[Auto-eval] Memory eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:20:01.541Z",
+    "summary": "What: Memory quality pass — updated docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 4 files changed (+135 -41 lines)"
+  },
+  {
+    "id": "8269392e-983a-4c3e-8444-b1b9d11a1851",
+    "title": "[Auto-eval] Frontend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:23:19.102Z",
+    "summary": "What: Frontend quality pass — updated Footer, Navigation, home\nWhy: Automatic frontend improvements to keep code clean and polished\nHow: 3 files changed (+10 -9 lines)"
+  },
+  {
+    "id": "174e912f-98f5-44d8-99b2-7c0172111ec4",
+    "title": "[Auto-eval] Backend eval needs review",
+    "status": "needs_testing",
+    "createdAt": "2026-02-02T02:25:54.547Z",
+    "summary": "What: Backend quality pass — updated chat API, stripe API, request-dedup\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 3 files changed (+103 -41 lines)"
+  },
+  {
+    "id": "5b4b20ae-1661-47f9-bd31-7a58ddaaf0d8",
+    "title": "[Auto-eval] Functionality eval running...",
+    "status": "pending",
+    "createdAt": "2026-02-02T02:30:04.084Z"
   }
 ]
