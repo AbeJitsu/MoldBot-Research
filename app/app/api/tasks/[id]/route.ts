@@ -17,7 +17,10 @@ export async function PUT(
   if (result instanceof NextResponse) return result;
   const body = result;
 
-  const updates: { title?: string; status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority } = {};
+  const url = new URL(request.url);
+  const workingDir = url.searchParams.get("workingDir") || undefined;
+
+  const updates: { title?: string; status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority; workingDir?: string } = {};
 
   if (typeof body.title === "string" && body.title.trim()) {
     const title = body.title.trim();
@@ -56,6 +59,9 @@ export async function PUT(
       );
     }
   }
+  if (workingDir) {
+    updates.workingDir = workingDir;
+  }
 
   try {
     const task = await updateTask(id, updates);
@@ -82,7 +88,9 @@ export async function DELETE(
   }
 
   try {
-    const deleted = await deleteTask(id);
+    const url = new URL(request.url);
+    const workingDir = url.searchParams.get("workingDir") || undefined;
+    const deleted = await deleteTask(id, workingDir);
     if (!deleted) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }

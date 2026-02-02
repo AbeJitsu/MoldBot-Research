@@ -37,9 +37,20 @@ function readEvalLogs(): EvalLogEntry[] {
   const recovered = tryParseEvalLogFile(backupFile);
   if (recovered) {
     console.log(`[eval-logs] Recovered ${recovered.length} entries from backup`);
-    try { fs.copyFileSync(backupFile, EVAL_LOG_FILE); } catch {}
+    try {
+      fs.copyFileSync(backupFile, EVAL_LOG_FILE);
+      console.log("[eval-logs] Restored backup as eval-log.json");
+    } catch {}
     return recovered;
   }
+
+  // No valid backup, save corrupted file for debugging if it exists
+  try {
+    if (fs.existsSync(EVAL_LOG_FILE)) {
+      fs.copyFileSync(EVAL_LOG_FILE, `${EVAL_LOG_FILE}.corrupt`);
+      console.log("[eval-logs] Saved corrupted file as eval-log.json.corrupt");
+    }
+  } catch {}
 
   return [];
 }

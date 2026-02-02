@@ -1,1 +1,10 @@
 .last-cwd
+
+# Backup files - periodic snapshots for corruption recovery
+*.backup
+
+# Corrupted files saved for debugging
+*.corrupt
+
+# macOS metadata
+.DS_Store

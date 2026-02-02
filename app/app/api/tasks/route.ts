@@ -5,7 +5,9 @@ import { isAuthorized, unauthorizedResponse, parseJsonBody } from "@/lib/auth";
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return unauthorizedResponse();
   try {
-    const tasks = await getAllTasks();
+    const url = new URL(request.url);
+    const workingDir = url.searchParams.get("workingDir") || undefined;
+    const tasks = await getAllTasks(workingDir);
     return NextResponse.json(tasks);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to read tasks";
@@ -32,7 +34,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const options: { status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority } = {};
+  const url = new URL(request.url);
+  const workingDir = url.searchParams.get("workingDir") || undefined;
+
+  const options: { status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority; workingDir?: string } = {};
   if (body.status && VALID_STATUSES.includes(body.status as Task["status"])) {
     options.status = body.status as Task["status"];
   }
@@ -44,6 +49,9 @@ export async function POST(request: Request) {
   }
   if (body.priority && VALID_PRIORITIES.includes(body.priority as TaskPriority)) {
     options.priority = body.priority as TaskPriority;
+  }
+  if (workingDir) {
+    options.workingDir = workingDir;
   }
 
   try {

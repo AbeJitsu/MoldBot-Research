@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { formatRelativeTime } from "@/lib/format";
+import ReconnectingOverlay from "./ReconnectingOverlay";
 
 // ============================================
 // CLICK OUTSIDE HOOK
@@ -155,6 +156,7 @@ export default function ChatSession() {
   const [retryAttempt, setRetryAttempt] = useState<number | null>(null);
   const [retryMax, setRetryMax] = useState<number | null>(null);
   const [evalRetryInfo, setEvalRetryInfo] = useState<{ attempt: number; maxAttempts: number; delaySeconds: number } | null>(null);
+  const [showReconnecting, setShowReconnecting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -298,6 +300,7 @@ export default function ChatSession() {
     ws.onopen = () => {
       setStatus("connected");
       setNeedsToken(false);
+      setShowReconnecting(false);
       reconnectAttemptRef.current = 0;
     };
 
@@ -319,11 +322,17 @@ export default function ChatSession() {
       setStatus("disconnected");
       wsRef.current = null;
 
+      // Show reconnecting overlay if we were previously connected
+      if (reconnectAttemptRef.current > 0) {
+        setShowReconnecting(true);
+      }
+
       // If connection was rejected (never opened) and we're on a non-localhost host,
       // likely a 401 — show token prompt instead of reconnecting endlessly
       const isRemote = !["localhost", "127.0.0.1"].includes(window.location.hostname);
       if (event.code === 1006 && reconnectAttemptRef.current >= 2 && isRemote) {
         setNeedsToken(true);
+        setShowReconnecting(false);
         return;
       }
 
@@ -360,6 +369,11 @@ export default function ChatSession() {
 
   const handleServerEvent = useCallback((data: any) => {
     const type = data.type;
+
+    if (type === "restarting") {
+      setShowReconnecting(true);
+      return;
+    }
 
     if (type === "state") {
       if (data.cwd) setCwd(data.cwd);
@@ -744,6 +758,10 @@ export default function ChatSession() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--surface-0)' }}>
+      <ReconnectingOverlay
+        visible={showReconnecting}
+        onDismiss={() => setShowReconnecting(false)}
+      />
       {/* Status bar */}
       <div
         className="flex items-center gap-x-2.5 px-4 py-1.5 border-b border-white/[0.06] text-xs overflow-x-auto scrollbar-none"

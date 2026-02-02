@@ -2,7 +2,14 @@ import fs from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
-const TASKS_FILE = path.join(process.cwd(), "..", "tasks.json");
+// Get tasks file path for a given working directory
+function getTasksFilePath(workingDir?: string): string {
+  if (!workingDir) {
+    // Default to bridgette-automation directory if no working dir specified
+    return path.join(process.cwd(), "..", "tasks.json");
+  }
+  return path.join(workingDir, "tasks.json");
+}
 
 export type TaskPriority = "high" | "normal" | "low";
 
@@ -81,7 +88,9 @@ function tryParseTasksFile(filePath: string): Task[] | null {
   }
 }
 
-function readTasks(): Task[] {
+function readTasks(workingDir?: string): Task[] {
+  const TASKS_FILE = getTasksFilePath(workingDir);
+
   // Clean up stale temp file from a previously failed write
   const tmpFile = `${TASKS_FILE}.tmp`;
   try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch {}
@@ -90,15 +99,24 @@ function readTasks(): Task[] {
     const data = fs.readFileSync(TASKS_FILE, "utf-8");
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) {
-      // File exists but has wrong structure — back up before overwriting
-      console.error("[tasks] tasks.json has invalid structure (not an array), backing up");
-      try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
-      // Try to recover from the previous backup (from an earlier corruption)
-      const recovered = tryParseTasksFile(`${TASKS_FILE}.backup`);
+      // File exists but has wrong structure — try to recover from backup
+      console.error("[tasks] tasks.json has invalid structure (not an array)");
+      const backupFile = `${TASKS_FILE}.backup`;
+      const recovered = tryParseTasksFile(backupFile);
       if (recovered) {
         console.log(`[tasks] Recovered ${recovered.length} tasks from backup`);
+        // Restore the backup as the main file
+        try {
+          fs.copyFileSync(backupFile, TASKS_FILE);
+          console.log("[tasks] Restored backup as tasks.json");
+        } catch {}
         return recovered;
       }
+      // No valid backup, save corrupted file for debugging
+      try {
+        fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.corrupt`);
+        console.log("[tasks] Saved corrupted file as tasks.json.corrupt");
+      } catch {}
       return [];
     }
     return sanitizeTasks(parsed);
@@ -108,9 +126,7 @@ function readTasks(): Task[] {
       return [];
     }
     // Parse error or other read error — file may be corrupted
-    console.error(`[tasks] Failed to read tasks.json: ${err.message}. Backing up corrupt file.`);
-    try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
-    // Attempt auto-recovery from backup — prevents data loss on corruption
+    console.error(`[tasks] Failed to read tasks.json: ${err.message}`);
     const backupFile = `${TASKS_FILE}.backup`;
     const recovered = tryParseTasksFile(backupFile);
     if (recovered) {
@@ -122,22 +138,31 @@ function readTasks(): Task[] {
       } catch {}
       return recovered;
     }
+    // No valid backup, save corrupted file for debugging
+    try {
+      fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.corrupt`);
+      console.log("[tasks] Saved corrupted file as tasks.json.corrupt");
+    } catch {}
     return [];
   }
 }
 
-// Track writes to create periodic backups of known-good data
-let writeCount = 0;
+// Track writes to create periodic backups of known-good data (per working directory)
+const writeCounters = new Map<string, number>();
 const BACKUP_EVERY_N_WRITES = 10;
 
-function writeTasks(tasks: Task[]): void {
+function writeTasks(tasks: Task[], workingDir?: string): void {
+  const TASKS_FILE = getTasksFilePath(workingDir);
+  const dirKey = TASKS_FILE; // Use full path as key
+
   const tmpFile = `${TASKS_FILE}.tmp`;
   try {
     fs.writeFileSync(tmpFile, JSON.stringify(tasks, null, 2));
     fs.renameSync(tmpFile, TASKS_FILE);
 
     // Periodically snapshot a known-good backup for recovery
-    writeCount++;
+    const writeCount = (writeCounters.get(dirKey) || 0) + 1;
+    writeCounters.set(dirKey, writeCount);
     if (writeCount % BACKUP_EVERY_N_WRITES === 0) {
       try { fs.copyFileSync(TASKS_FILE, `${TASKS_FILE}.backup`); } catch {}
     }
@@ -166,8 +191,8 @@ export function isValidTaskId(id: string): boolean {
 // PUBLIC API — all operations go through the lock
 // ============================================
 
-export function getAllTasks(): Promise<Task[]> {
-  return withLock(() => readTasks());
+export function getAllTasks(workingDir?: string): Promise<Task[]> {
+  return withLock(() => readTasks(workingDir));
 }
 
 // Number of oldest completed tasks to purge when approaching the limit
@@ -177,10 +202,10 @@ export const VALID_PRIORITIES: TaskPriority[] = ["high", "normal", "low"];
 
 export function createTask(
   title: string,
-  options?: { status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority }
+  options?: { status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority; workingDir?: string }
 ): Promise<Task> {
   return withLock(() => {
-    let tasks = readTasks();
+    let tasks = readTasks(options?.workingDir);
 
     // Auto-purge oldest completed tasks when nearing the limit
     if (tasks.length >= MAX_TASKS) {
@@ -230,17 +255,17 @@ export function createTask(
     if (options?.description) task.description = options.description;
     if (options?.priority && VALID_PRIORITIES.includes(options.priority)) task.priority = options.priority;
     tasks.push(task);
-    writeTasks(tasks);
+    writeTasks(tasks, options?.workingDir);
     return task;
   });
 }
 
 export function updateTask(
   id: string,
-  updates: { title?: string; status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority }
+  updates: { title?: string; status?: Task["status"]; summary?: string; description?: string; priority?: TaskPriority; workingDir?: string }
 ): Promise<Task | null> {
   return withLock(() => {
-    const tasks = readTasks();
+    const tasks = readTasks(updates.workingDir);
     const index = tasks.findIndex((t) => t.id === id);
     if (index === -1) return null;
 
@@ -262,14 +287,14 @@ export function updateTask(
       }
     }
 
-    writeTasks(tasks);
+    writeTasks(tasks, updates.workingDir);
     return tasks[index];
   });
 }
 
-export function advanceAllByStatus(fromStatus: Task["status"], toStatus: Task["status"]): Promise<number> {
+export function advanceAllByStatus(fromStatus: Task["status"], toStatus: Task["status"], workingDir?: string): Promise<number> {
   return withLock(() => {
-    const tasks = readTasks();
+    const tasks = readTasks(workingDir);
     let count = 0;
     for (const task of tasks) {
       if (task.status === fromStatus) {
@@ -278,32 +303,32 @@ export function advanceAllByStatus(fromStatus: Task["status"], toStatus: Task["s
       }
     }
     if (count > 0) {
-      writeTasks(tasks);
+      writeTasks(tasks, workingDir);
       console.log(`[tasks] Advanced ${count} tasks from ${fromStatus} to ${toStatus}`);
     }
     return count;
   });
 }
 
-export function clearCompletedTasks(): Promise<number> {
+export function clearCompletedTasks(workingDir?: string): Promise<number> {
   return withLock(() => {
-    const tasks = readTasks();
+    const tasks = readTasks(workingDir);
     const remaining = tasks.filter((t) => t.status !== "completed");
     const cleared = tasks.length - remaining.length;
     if (cleared > 0) {
-      writeTasks(remaining);
+      writeTasks(remaining, workingDir);
       console.log(`[tasks] Cleared ${cleared} completed tasks`);
     }
     return cleared;
   });
 }
 
-export function deleteTask(id: string): Promise<boolean> {
+export function deleteTask(id: string, workingDir?: string): Promise<boolean> {
   return withLock(() => {
-    const tasks = readTasks();
+    const tasks = readTasks(workingDir);
     const filtered = tasks.filter((t) => t.id !== id);
     if (filtered.length === tasks.length) return false;
-    writeTasks(filtered);
+    writeTasks(filtered, workingDir);
     return true;
   });
 }

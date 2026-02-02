@@ -6,7 +6,9 @@ export async function DELETE(request: Request) {
   if (!isAuthorized(request)) return unauthorizedResponse();
 
   try {
-    const count = await clearCompletedTasks();
+    const url = new URL(request.url);
+    const workingDir = url.searchParams.get("workingDir") || undefined;
+    const count = await clearCompletedTasks(workingDir);
     return NextResponse.json({ ok: true, cleared: count });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to clear completed tasks";

@@ -929,6 +929,16 @@ app.prepare().then(() => {
           if (prompt) {
             handleChatMessage(ws, prompt, chatSessions.get(ws) || null, undefined);
           }
+        } else if (parsed.type === "restart_server") {
+          console.log("[server] Restart requested via WebSocket");
+          // Notify all clients before shutting down
+          broadcastToChat({ type: "restarting" });
+          // Give clients a moment to receive the message, then exit
+          // launchd KeepAlive will restart the process
+          setTimeout(() => {
+            console.log("[server] Shutting down for restart...");
+            process.exit(0);
+          }, 500);
         }
       } catch (err) {
         // Distinguish JSON parse errors (expected for malformed messages) from real bugs

@@ -507,8 +507,15 @@ function notify() {
   listeners.forEach((l) => l());
 }
 
+// Build task API URL with working directory from localStorage
+function taskUrl(path: string): string {
+  const cwd = typeof window !== "undefined" ? localStorage.getItem("bridgette-cwd") || "" : "";
+  const separator = path.includes("?") ? "&" : "?";
+  return cwd ? `${path}${separator}workingDir=${encodeURIComponent(cwd)}` : path;
+}
+
 function fetchTasks() {
-  fetch("/api/tasks")
+  fetch(taskUrl("/api/tasks"))
     .then((r) => r.json())
     .then((data) => {
       // Only notify if data actually changed
@@ -547,7 +554,7 @@ function useTasks() {
 
   const addTask = useCallback(async (title: string) => {
     try {
-      const res = await fetch("/api/tasks", {
+      const res = await fetch(taskUrl("/api/tasks"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
@@ -579,7 +586,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await fetch(taskUrl(`/api/tasks/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -602,7 +609,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      const res = await fetch(taskUrl(`/api/tasks/${id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete task");
     } catch {
       globalTasks = previous;
@@ -617,7 +624,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await fetch(taskUrl(`/api/tasks/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
@@ -643,7 +650,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch("/api/tasks/advance-all", {
+      const res = await fetch(taskUrl("/api/tasks/advance-all"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ from, to }),
@@ -667,7 +674,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch("/api/tasks/clear-completed", { method: "DELETE" });
+      const res = await fetch(taskUrl("/api/tasks/clear-completed"), { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to clear completed tasks");
     } catch {
       globalTasks = previous;
@@ -682,7 +689,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await fetch(taskUrl(`/api/tasks/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priority }),
@@ -704,7 +711,7 @@ function useTasks() {
     notify();
 
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
+      const res = await fetch(taskUrl(`/api/tasks/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description }),

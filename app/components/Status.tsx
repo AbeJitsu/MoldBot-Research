@@ -118,6 +118,20 @@ export default function Status() {
           <InfoCard label="Node" value={data.server.nodeVersion} />
           <InfoCard label="Last check" value={formatRelativeTime(data.server.timestamp)} />
         </div>
+        <button
+          onClick={async () => {
+            if (!confirm("Restart the Bridgette server? The page will reload when it comes back.")) return;
+            try {
+              await fetch("/api/restart", { method: "POST" });
+            } catch {
+              // Expected — server shuts down before responding sometimes
+            }
+          }}
+          className="mt-3 w-full px-4 py-2 text-sm font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-lg transition-colors"
+          aria-label="Restart server"
+        >
+          Restart Server
+        </button>
       </Section>
 
       {/* Git */}

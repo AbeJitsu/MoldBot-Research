@@ -27,7 +27,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const count = await advanceAllByStatus(from, to);
+    const url = new URL(request.url);
+    const workingDir = url.searchParams.get("workingDir") || undefined;
+    const count = await advanceAllByStatus(from, to, workingDir);
     return NextResponse.json({ ok: true, advanced: count });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to advance tasks";
