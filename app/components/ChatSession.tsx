@@ -135,7 +135,6 @@ export default function ChatSession() {
     return "";
   });
   const [showDirPicker, setShowDirPicker] = useState(false);
-  const [thinking, setThinking] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessions, setSessions] = useState<SessionEntry[]>([]);
   const [autoEval, setAutoEval] = useState(false);
@@ -227,14 +226,14 @@ export default function ChatSession() {
       const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text };
       setMessages((prev) => [...prev, userMsg]);
 
-      const payload: Record<string, unknown> = { type: "message", text, sessionId, thinking };
+      const payload: Record<string, unknown> = { type: "message", text, sessionId };
       if (selectedModel) payload.model = selectedModel;
       wsRef.current.send(JSON.stringify(payload));
       setStatus("streaming");
     }
     window.addEventListener("bridgette-send-to-chat", handleSendToChat);
     return () => window.removeEventListener("bridgette-send-to-chat", handleSendToChat);
-  }, [status, sessionId, thinking, selectedModel]);
+  }, [status, sessionId, selectedModel]);
 
   // Save session to localStorage when we get a sessionId
   useEffect(() => {
@@ -632,11 +631,11 @@ export default function ChatSession() {
     // Reset textarea height
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    const payload: Record<string, unknown> = { type: "message", text, sessionId, thinking };
+    const payload: Record<string, unknown> = { type: "message", text, sessionId };
     if (selectedModel) payload.model = selectedModel;
     wsRef.current.send(JSON.stringify(payload));
     setStatus("streaming");
-  }, [input, status, sessionId, thinking, selectedModel]);
+  }, [input, status, sessionId, selectedModel]);
 
   const startNewChat = useCallback(() => {
     setMessages([]);
@@ -907,15 +906,12 @@ export default function ChatSession() {
           {/* Divider — separates auto-eval from thinking/session */}
           <span className="w-px h-4 bg-white/[0.08]" aria-hidden="true" />
 
-          {/* Thinking toggle */}
+          {/* Thinking toggle - DISABLED: Not yet available in Claude CLI v2.1.29 */}
+          {/* See roadmap.md for when extended thinking becomes available via CLI */}
           <button
-            onClick={() => setThinking(!thinking)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border ${
-              thinking
-                ? "bg-purple-500/10 text-purple-300 border-purple-500/30 shadow-sm shadow-purple-500/10"
-                : "text-gray-500 border-white/[0.06] hover:text-gray-300 hover:border-white/[0.12] hover:bg-white/[0.03]"
-            }`}
-            title={thinking ? "Thinking enabled" : "Thinking disabled"}
+            disabled
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 border text-gray-600 border-white/[0.06] cursor-not-allowed opacity-50"
+            title="Extended thinking not yet available in Claude CLI v2.1.29"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z" />

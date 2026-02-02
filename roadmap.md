@@ -151,9 +151,8 @@
 - Approval buttons for tool use
 - ~~Code syntax highlighting in markdown~~ — **Built** (react-syntax-highlighter with Prism + oneDark theme)
 - ~~Search/filter conversation history~~ — **Built** (search box in session dropdown)
+- **Extended thinking** — Enable when available in Claude CLI (v2.1.29 doesn't expose `--thinking` flag yet; feature ready in Claude API for Opus 4.5)
 - Multiple sessions support
-
-### Auto-Iteration System (Built)
 - Server-level idle timer (15 min) — works with or without browser
 - **Four-eval rotation** — frontend → backend → functionality → memory curator, wraps around
 - Rotation index persisted in `.auto-eval-index`, eval prompts in `automations/auto-eval/`

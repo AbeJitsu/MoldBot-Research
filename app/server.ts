@@ -359,7 +359,6 @@ app.prepare().then(() => {
     text: string;
     sessionId: string | null;
     model: string | undefined;
-    thinking: boolean | undefined;
   }
   const chatRetryStates = new Map<WebSocket, ChatRetryState>();
 
@@ -852,7 +851,7 @@ app.prepare().then(() => {
             chatRetryStates.delete(ws);
             ws.send(JSON.stringify({ type: "retry_cancelled" }));
           }
-          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.thinking, parsed.model);
+          handleChatMessage(ws, parsed.text, parsed.sessionId || chatSessions.get(ws), parsed.model);
         } else if (parsed.type === "stop") {
           const proc = chatProcesses.get(ws);
           if (proc && proc.exitCode === null) {
@@ -970,7 +969,7 @@ app.prepare().then(() => {
   // Maximum user message length (100KB) — prevents spawning claude with absurdly large arguments
   const MAX_MESSAGE_LENGTH = 100 * 1024;
 
-  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, thinking?: boolean, model?: string) {
+  function handleChatMessage(ws: WebSocket, text: string, sessionId: string | null, model?: string) {
     // Don't spawn a process if the client already disconnected
     if (ws.readyState !== WebSocket.OPEN) {
       console.log("[ws] Skipping message — client already disconnected");
@@ -1012,10 +1011,11 @@ app.prepare().then(() => {
       args.push("--model", model);
     }
 
-    // Enable thinking if requested
-    if (thinking) {
-      args.push("--thinking");
-    }
+    // TODO: Extended thinking available in Claude API but not exposed via CLI flag yet
+    // Thinking must be passed at API level, not as --thinking CLI argument
+    // if (thinking) {
+    //   args.push("--thinking");
+    // }
 
     // Inject memory files as system prompt context
     const memoryPrompt = loadMemoryPrompt();
@@ -1119,7 +1119,7 @@ app.prepare().then(() => {
       if (code !== 0 && code !== null && isRateLimitError(stderrBuffer)) {
         const retryState = chatRetryStates.get(ws) || {
           timer: null, countdownTimer: null, attempt: 0,
-          text, sessionId, model, thinking,
+          text, sessionId, model,
         };
         const delay = getRetryDelay(retryState.attempt);
 
@@ -1150,7 +1150,7 @@ app.prepare().then(() => {
           retryState.timer = setTimeout(() => {
             retryState.timer = null;
             if (ws.readyState === WebSocket.OPEN) {
-              handleChatMessage(ws, retryState.text, retryState.sessionId, retryState.thinking, retryState.model);
+              handleChatMessage(ws, retryState.text, retryState.sessionId, retryState.model);
             }
           }, delay * 1000);
 
