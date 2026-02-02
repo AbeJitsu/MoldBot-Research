@@ -130,7 +130,7 @@ export default function MemoryEditor() {
           {fileFilter && filteredFiles.length === 0 && (
             <div className="px-4 py-6 text-center">
               <p className="text-xs text-gray-600">No files matching &ldquo;{fileFilter}&rdquo;</p>
-              <button onClick={() => setFileFilter("")} className="text-xs text-emerald-400 hover:text-emerald-300 mt-1 transition-colors">Clear filter</button>
+              <button onClick={() => setFileFilter("")} className="text-xs text-emerald-400 hover:text-emerald-300 active:text-emerald-200 mt-1 transition-colors rounded px-1 py-0.5 hover:bg-emerald-500/10 active:bg-emerald-500/20 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60">Clear filter</button>
             </div>
           )}
           {files.length === 0 && !fileFilter && (
@@ -153,10 +153,10 @@ export default function MemoryEditor() {
                 <button
                   key={file.path}
                   onClick={() => loadFile(file.path)}
-                  className={`w-full text-left px-4 py-2 text-sm transition-colors duration-150 ${
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors duration-150 rounded-sm focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60 ${
                     selectedFile === file.path
                       ? "bg-emerald-500/10 text-emerald-400 font-medium"
-                      : "text-gray-300 hover:bg-white/[0.03]"
+                      : "text-gray-300 hover:bg-white/[0.03] active:bg-white/[0.06]"
                   }`}
                 >
                   <div className="truncate">

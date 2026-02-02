@@ -770,7 +770,7 @@ export default function ChatSession() {
               reconnectAttemptRef.current = 0;
               connectWebSocket();
             }}
-            className="text-xs px-2 py-0.5 rounded border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors duration-150"
+            className="text-xs px-2 py-0.5 rounded border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 active:bg-amber-500/20 hover:border-amber-500/50 active:border-amber-500/60 transition-colors duration-150 focus:outline-none focus-visible:outline-1 focus-visible:outline-amber-500/60"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
             Retry
@@ -780,7 +780,7 @@ export default function ChatSession() {
         {/* Working directory */}
         <button
           onClick={() => setShowDirPicker(!showDirPicker)}
-          className="ml-1 flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-all duration-200 text-xs px-2.5 py-1 rounded-md border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.03]"
+          className="ml-1 flex items-center gap-1.5 text-gray-500 hover:text-gray-300 active:text-gray-200 transition-all duration-200 text-xs px-2.5 py-1 rounded-md border border-white/[0.06] hover:border-white/[0.12] active:border-white/[0.20] hover:bg-white/[0.03] active:bg-white/[0.06] focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60"
           style={{ fontFamily: 'var(--font-mono)' }}
           title="Change working directory"
           aria-label="Change working directory"

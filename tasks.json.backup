@@ -1342,25 +1342,5 @@
     "status": "completed",
     "createdAt": "2026-02-01T23:53:52.201Z",
     "summary": "What: Backend quality pass — updated docs\nWhy: Automatic backend improvements to keep code clean and polished\nHow: 5 files changed (+2237 -6 lines)"
-  },
-  {
-    "id": "de62148a-988d-456a-97c8-da0a18bd4911",
-    "title": "[Auto-eval] Functionality eval failed",
-    "status": "completed",
-    "createdAt": "2026-02-01T23:54:24.741Z",
-    "summary": "What: Functionality quality pass — updated .auto-eval-index, docs\nWhy: Automatic functionality improvements to keep code clean and polished\nHow: 6 files changed (+2254 -7 lines)"
-  },
-  {
-    "id": "ed3d76fa-2332-4688-97ea-40ce90b6246c",
-    "title": "[Auto-eval] Memory eval failed",
-    "status": "completed",
-    "createdAt": "2026-02-01T23:55:15.467Z",
-    "summary": "What: Memory quality pass — updated .auto-eval-index, .auto-eval-interval, docs\nWhy: Automatic memory improvements to keep code clean and polished\nHow: 7 files changed (+2271 -8 lines)"
-  },
-  {
-    "id": "a692367a-f5c9-47ed-9113-2591148d1d96",
-    "title": "[Auto-eval] Frontend eval running...",
-    "status": "pending",
-    "createdAt": "2026-02-02T00:10:59.849Z"
   }
 ]

@@ -146,8 +146,8 @@ export default function Home() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border-b-2 ${
                 activeTab === tab.id
                   ? `${tab.activeClass} bg-white/[0.04]`
-                  : "text-gray-500 border-transparent hover:text-gray-300 hover:bg-white/[0.03]"
-              }`}
+                  : "text-gray-500 border-transparent hover:text-gray-300 hover:bg-white/[0.03] active:bg-white/[0.06]"
+              } focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500/60`}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d={tab.icon} />
@@ -165,7 +165,7 @@ export default function Home() {
           {!leftPanelOpen && (
             <button
               onClick={() => setLeftPanelOpen(true)}
-              className="relative flex-shrink-0 w-8 flex items-center justify-center border-r border-white/[0.06] hover:bg-white/[0.03] transition-colors text-gray-600 hover:text-gray-400"
+              className="relative flex-shrink-0 w-8 flex items-center justify-center border-r border-white/[0.06] hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors text-gray-600 hover:text-emerald-400 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-emerald-500/60"
               style={{ background: 'var(--surface-1)' }}
               title="Show pending tasks"
               aria-label="Show pending tasks panel"
@@ -210,7 +210,7 @@ export default function Home() {
           {!rightPanelOpen && (
             <button
               onClick={() => setRightPanelOpen(true)}
-              className="relative flex-shrink-0 w-8 flex items-center justify-center border-l border-white/[0.06] hover:bg-white/[0.03] transition-colors text-gray-600 hover:text-gray-400"
+              className="relative flex-shrink-0 w-8 flex items-center justify-center border-l border-white/[0.06] hover:bg-amber-500/10 active:bg-amber-500/20 transition-colors text-gray-600 hover:text-amber-400 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-amber-500/60"
               style={{ background: 'var(--surface-1)' }}
               title="Show active tasks"
               aria-label="Show active tasks panel"

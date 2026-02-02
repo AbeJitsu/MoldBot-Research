@@ -131,7 +131,7 @@ export default function Automations({ onSendToTerminal, onSendToChat }: Automati
                 </div>
                 <button
                   onClick={() => viewPrompt(auto.name)}
-                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-md border border-white/[0.08] text-gray-400 hover:text-gray-200 hover:bg-white/[0.05] transition-all duration-200"
+                  className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-md border border-white/[0.08] text-gray-400 hover:text-gray-200 active:text-gray-100 hover:bg-white/[0.08] active:bg-white/[0.12] transition-all duration-200 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60"
                   style={{ background: 'var(--surface-2)' }}
                 >
                   {expandedPrompt === auto.name ? "Hide" : "View"}
@@ -140,7 +140,7 @@ export default function Automations({ onSendToTerminal, onSendToChat }: Automati
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => copyPrompt(auto.name)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md border ${colors.border} ${colors.accent} hover:bg-white/[0.05] transition-all duration-200`}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md border ${colors.border} ${colors.accent} hover:bg-white/[0.08] active:bg-white/[0.12] transition-all duration-200 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60`}
                   style={{ background: 'var(--surface-2)' }}
                 >
                   {copiedName === auto.name ? "Copied!" : "Copy Prompt"}
@@ -159,8 +159,8 @@ export default function Automations({ onSendToTerminal, onSendToChat }: Automati
                       setSendingName(null);
                     }}
                     disabled={sendingName === auto.name}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md border border-emerald-500/20 text-emerald-400 transition-all duration-200 ${
-                      sendingName === auto.name ? "opacity-60 cursor-wait" : "hover:bg-emerald-500/10"
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md border border-emerald-500/20 text-emerald-400 transition-all duration-200 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60 ${
+                      sendingName === auto.name ? "opacity-60 cursor-wait" : "hover:bg-emerald-500/10 active:bg-emerald-500/20"
                     }`}
                     style={{ background: 'var(--surface-2)' }}
                   >
@@ -208,7 +208,7 @@ function CurlExample({ command }: { command: string }) {
 
   return (
     <button
-      className="group flex items-center gap-2 text-xs text-gray-500 rounded-md px-2.5 py-1.5 border border-white/[0.04] hover:border-white/[0.08] transition-all duration-150 cursor-pointer w-full text-left"
+      className="group flex items-center gap-2 text-xs text-gray-500 rounded-md px-2.5 py-1.5 border border-white/[0.04] hover:border-white/[0.08] active:border-white/[0.12] hover:bg-white/[0.02] active:bg-white/[0.04] transition-all duration-150 cursor-pointer w-full text-left focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60"
       style={{ background: "var(--surface-2)", fontFamily: "var(--font-mono)" }}
       onClick={() => {
         navigator.clipboard.writeText(command);

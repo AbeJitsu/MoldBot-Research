@@ -109,7 +109,7 @@ export default function EvalLogs() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="text-gray-400 text-xs font-medium border border-white/[0.06] rounded-md px-2 py-1 hover:border-white/[0.12] focus:outline-none focus:ring-1 focus:ring-emerald-500/50 cursor-pointer transition-all duration-200"
+            className="text-gray-400 text-xs font-medium border border-white/[0.06] rounded-md px-2 py-1 hover:border-white/[0.12] hover:bg-white/[0.02] focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/30 cursor-pointer transition-all duration-200 active:bg-white/[0.04]"
             style={{ background: "var(--surface-2)", fontFamily: "var(--font-mono)" }}
           >
             <option value="all">All types</option>
@@ -121,7 +121,7 @@ export default function EvalLogs() {
           {/* Refresh */}
           <button
             onClick={() => { setLoading(true); fetchLogs(); }}
-            className="text-gray-500 hover:text-gray-300 p-1.5 rounded-md hover:bg-white/[0.05] transition-all duration-200 border border-white/[0.06]"
+            className="text-gray-500 hover:text-emerald-400 active:text-emerald-300 p-1.5 rounded-md hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-all duration-200 border border-white/[0.06] hover:border-emerald-500/30 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60"
             title="Refresh logs"
             aria-label="Refresh logs"
           >
@@ -154,7 +154,7 @@ export default function EvalLogs() {
               >
                 <button
                   onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors duration-150 text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors duration-150 text-left rounded-lg focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/40"
                 >
                   {/* Status dot */}
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusStyle.dot}`} />

@@ -60,7 +60,7 @@ export function LeftTaskPanel({ onCollapse, width }: { onCollapse?: () => void; 
       <div className="px-3.5 py-2.5 border-b border-white/[0.06] flex items-center justify-between">
         <h2 className="text-xs uppercase tracking-widest text-gray-500 font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>Pending</h2>
         {onCollapse && (
-          <button onClick={onCollapse} className="text-gray-600 hover:text-gray-400 transition-colors p-0.5" title="Collapse panel" aria-label="Collapse pending tasks panel">
+          <button onClick={onCollapse} className="text-gray-600 hover:text-emerald-400 active:text-emerald-300 hover:bg-emerald-500/10 active:bg-emerald-500/20 transition-colors p-0.5 rounded focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60" title="Collapse panel" aria-label="Collapse pending tasks panel">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
@@ -162,7 +162,7 @@ export function RightTaskPanel({ onCollapse, width }: { onCollapse?: () => void;
             {needsTesting.length > 1 && (
               <button
                 onClick={() => advanceAll("needs_testing", "completed")}
-                className="text-xs text-gray-600 hover:text-emerald-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-emerald-500/5"
+                className="text-xs text-gray-600 hover:text-emerald-400 active:text-emerald-300 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-emerald-500/10 active:bg-emerald-500/20 focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60"
                 style={{ fontFamily: 'var(--font-mono)' }}
                 title="Mark all as completed"
               >
@@ -170,7 +170,7 @@ export function RightTaskPanel({ onCollapse, width }: { onCollapse?: () => void;
               </button>
             )}
           {onCollapse && (
-            <button onClick={onCollapse} className="text-gray-600 hover:text-gray-400 transition-colors p-0.5" title="Collapse panel" aria-label="Collapse active tasks panel">
+            <button onClick={onCollapse} className="text-gray-600 hover:text-amber-400 active:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/20 transition-colors p-0.5 rounded focus:outline-none focus-visible:outline-1 focus-visible:outline-amber-500/60" title="Collapse panel" aria-label="Collapse active tasks panel">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 18l6-6-6-6" />
               </svg>
@@ -206,7 +206,7 @@ export function RightTaskPanel({ onCollapse, width }: { onCollapse?: () => void;
           {completed.length > 0 && (
             <button
               onClick={clearCompleted}
-              className="text-xs text-gray-600 hover:text-red-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-red-500/5"
+              className="text-xs text-gray-600 hover:text-red-400 active:text-red-300 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-red-500/10 active:bg-red-500/20 focus:outline-none focus-visible:outline-1 focus-visible:outline-red-500/60"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
               Clear all
@@ -294,7 +294,7 @@ function TaskItem({
       <div className="flex items-start gap-2">
         <button
           onClick={() => onAdvance(task.id)}
-          className={`mt-0.5 text-sm flex-shrink-0 ${statusIcon[task.status]} hover:text-emerald-400 transition-colors duration-150`}
+          className={`mt-0.5 text-sm flex-shrink-0 ${statusIcon[task.status]} hover:text-emerald-400 active:text-emerald-300 transition-colors duration-150 rounded-sm focus:outline-none focus-visible:outline-1 focus-visible:outline-emerald-500/60`}
           aria-label={`${advanceTitle[task.status]}: ${task.title}`}
           title={advanceTitle[task.status]}
         >
