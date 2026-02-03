@@ -164,7 +164,7 @@ The scheduler automatically triggers the next eval after the interval:
 **Symptoms:** Same eval type runs twice in a row, or out of order
 
 **Checklist:**
-- [ ] Check index file: `cat .auto-eval-index` (should be 0, 1, 2, or 3)
+- [ ] Check index file: `cat .auto-eval-index` (should be 0, 1, 2, 3, or 4)
 - [ ] Manually reset index: `echo "0" > .auto-eval-index`
 - [ ] Restart dev server
 - [ ] Trigger next eval and verify it runs type at index 0 (frontend)
