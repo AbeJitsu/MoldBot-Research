@@ -16,6 +16,7 @@
 - `components/Status.tsx` — Server health, git info, memory timestamps, auto-eval config visualization, launchd job status.
 - `app/page.tsx` — Dashboard with five-tab navigation (Chat/Terminal, Memory, Automations, Eval Logs, Status). Cmd+1-5 tab shortcuts. WAI-ARIA compliant tab panels.
 - `lib/auth.ts` — Authentication middleware for API routes.
+- **Nightly eval scheduler** — Server-level scheduler in `server.ts` that runs all 4 eval types at configured time with hourly intervals. Schedules next night after current cycle completes. Config persisted to `.nightly-eval-config` JSON file. Coexists with idle-timer auto-eval (separate system). Handles graceful startup/shutdown with proper timeout cleanup.
 
 ### Polish Remaining
 - Design system refinements
@@ -24,6 +25,7 @@
 
 - **Terminal:** Real PTY via node-pty, connected to xterm.js in the browser over `/ws/terminal` WebSocket. User runs `claude` (or any command) interactively with full color and tool approvals.
 - **Auto-eval:** Still uses `claude --print --stream-json` spawned headlessly. Streams output to connected clients via `/ws/chat`.
+- **Nightly scheduler:** Separate from idle-timer auto-eval. Uses same `triggerServerAutoEval()` but overrides eval type rotation. Configured via Automations UI (NightlyScheduleCard component). Runs independently on schedule, doesn't reset timer.
 - **Auto-iteration:** Server-level idle timer, four-eval rotation (frontend → backend → functionality → memory), merges main into dev before each run. Validates exit codes — failed evals log as "error". Stop button in UI.
 - **Process management:** Graceful shutdown, PTY and child process cleanup on server restart.
 
