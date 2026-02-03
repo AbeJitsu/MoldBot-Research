@@ -29,16 +29,25 @@ Rank issues by impact on future sessions. Prioritize:
 
 ## Process
 
-1. **Scan** — Read recent git history, all memory files, both CLAUDE.md files, and roadmap.md.
-2. **Cross-reference** — Compare documentation against actual source code to find mismatches.
-3. **Rank** — List the top 5-10 issues. Print the list.
-4. **Fix each issue:**
+1. **Read the fixes log** — Check `.nightly-eval-fixes.md` for recent fixes to understand what code changed
+2. **Scan** — Read recent git history, all memory files, both CLAUDE.md files, and roadmap.md.
+3. **Cross-reference** — Compare documentation against actual source code to find mismatches.
+4. **Rank** — List the top 5-10 issues. Print the list, excluding ones already in the fixes log.
+5. **Fix each issue:**
    a. For stale docs: update to match reality
    b. For missing docs: add concise, accurate entries
    c. For contradictions: pick the correct version, update all references
    d. For bloat: prune ruthlessly, keep only what's useful for future sessions
    e. Commit with a clear message: `Docs: [description of what was updated]`
-5. **After all fixes:** Run `cd app && npm run build` to verify no code was broken.
+6. **After all fixes:**
+   - Run `cd app && npm run build` to verify no code was broken
+   - Append a new entry to `.nightly-eval-fixes.md` documenting each fix:
+     ```
+     **[Issue name]**
+     - Issue: [describe what was broken]
+     - Fix: [describe the solution]
+     - Commit: [commit message or hash]
+     ```
 
 ## Requirements
 

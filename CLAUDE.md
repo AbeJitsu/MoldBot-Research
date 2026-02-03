@@ -186,6 +186,15 @@ Evals rotate through four focus areas, one per trigger:
 - Connected clients see `evalRunning` and `evalType` in the initial `state` event
 - "Run Now" button becomes a stop button while an eval is running
 
+### Eval Fixes Log
+
+All fixes from nightly evals are documented in `.nightly-eval-fixes.md`:
+
+- **Purpose** — Track what issues were fixed to avoid duplication and understand codebase state
+- **Format** — Markdown log with issue name, description, solution, and commit reference
+- **Maintenance** — Each eval appends its fixes to this log after completing
+- **Usage** — Future evals read this at the start to focus on remaining high-impact issues
+
 ### Testing
 
 ```bash

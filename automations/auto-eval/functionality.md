@@ -27,15 +27,24 @@ Rank issues by user impact. Prioritize:
 
 ## Process
 
-1. **Scan** — Read codebase files, CLAUDE.md, and roadmap.md. Understand what exists and what's missing.
-2. **Rank** — List the top 5-10 issues by user impact. Print the list.
-3. **Fix each issue using TDD:**
+1. **Read the fixes log** — Check `.nightly-eval-fixes.md` for recent fixes to avoid duplication
+2. **Scan** — Read codebase files, CLAUDE.md, and roadmap.md. Understand what exists and what's missing.
+3. **Rank** — List the top 5-10 issues by user impact. Print the list, excluding ones already in the fixes log.
+4. **Fix each issue using TDD:**
    a. Write a failing test that demonstrates the missing or broken behavior
    b. Implement the minimal fix to pass
    c. Verify the fix works
    d. Commit with a clear message: `Fix: [description of what was fixed]`
-4. **Cross-cutting changes welcome** — Frontend + backend changes in the same fix are expected here.
-5. **After all fixes:** Run `cd app && npm run build` to verify clean build.
+5. **Cross-cutting changes welcome** — Frontend + backend changes in the same fix are expected here.
+6. **After all fixes:**
+   - Run `cd app && npm run build` to verify clean build
+   - Append a new entry to `.nightly-eval-fixes.md` documenting each fix:
+     ```
+     **[Issue name]**
+     - Issue: [describe what was broken]
+     - Fix: [describe the solution]
+     - Commit: [commit message or hash]
+     ```
 
 ## Requirements
 

@@ -25,15 +25,24 @@ Rank issues by reliability impact. Prioritize:
 
 ## Process
 
-1. **Scan** — Read all backend files. Understand the full picture.
-2. **Rank** — List the top 5-10 issues by reliability impact. Print the list.
-3. **Fix each issue using TDD:**
+1. **Read the fixes log** — Check `.nightly-eval-fixes.md` for recent fixes to avoid duplication
+2. **Scan** — Read all backend files. Understand the full picture.
+3. **Rank** — List the top 5-10 issues by reliability impact. Print the list, excluding ones already in the fixes log.
+4. **Fix each issue using TDD:**
    a. Write a failing test that demonstrates the bug or missing behavior
    b. Implement the minimal fix to pass
    c. Verify the fix works
    d. Commit with a clear message: `Fix: [description of what was fixed]`
-4. **Cross-stack fixes welcome** — If a backend fix changes an API response shape or adds a new field, update the frontend component that consumes it. Don't leave the fix half-done.
-5. **After all fixes:** Run `cd app && npm run build` to verify clean build.
+5. **Cross-stack fixes welcome** — If a backend fix changes an API response shape or adds a new field, update the frontend component that consumes it. Don't leave the fix half-done.
+6. **After all fixes:**
+   - Run `cd app && npm run build` to verify clean build
+   - Append a new entry to `.nightly-eval-fixes.md` documenting each fix:
+     ```
+     **[Issue name]**
+     - Issue: [describe what was broken]
+     - Fix: [describe the solution]
+     - Commit: [commit message or hash]
+     ```
 
 ## Requirements
 
