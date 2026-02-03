@@ -1,47 +1,61 @@
-# Auto-Evaluation — Functionality Focus
+# Auto-Evaluation — Functionality: Find & Fix
 
-You are running as an automated evaluation. Your focus: **missing features, broken flows, and integration gaps**.
+You are running as an automated evaluation. Your job: **find the top 5-10 functionality gaps and fix them using TDD**. You must complete at least 5 fixes before stopping.
 
 ## Scope
 
-Examine all project files:
+All project files:
 - `app/components/`
 - `app/server.ts`
 - `app/app/api/`
+- `app/lib/`
 - `tasks.json`
-- `CLAUDE.md` (for planned but unbuilt features — check "What's Left" section)
-- `roadmap.md` (for roadmap items not yet implemented)
+- `CLAUDE.md` (check "What's Left" for planned but unbuilt features)
+- `roadmap.md` (check for roadmap items not yet implemented)
 
 ## What to Look For
 
-- Half-built or broken features — things that render but don't work end-to-end
-- Features listed in "What's Left" or roadmap that could be implemented now
-- Integration issues — features that should work together but don't
-- Broken user flows — click paths that dead-end or error
-- Missing functionality users would expect from a dashboard like this
-- State sync issues — UI not reflecting server state, stale data after actions
-- Missing keyboard shortcuts or accessibility flows
+Rank issues by user impact. Prioritize:
 
-## Instructions
+1. **Broken user flows** — click paths that dead-end, error, or silently fail
+2. **Half-built features** — things that render but don't work end-to-end
+3. **Planned features** — items in "What's Left" or roadmap that can be implemented now
+4. **State sync issues** — UI not reflecting server state, stale data after actions
+5. **Integration gaps** — features that should work together but don't
+6. **Missing feedback** — actions that succeed/fail without telling the user
+7. **Missing keyboard shortcuts** — common operations without keyboard access
 
-1. Read the codebase files, CLAUDE.md, and roadmap.md — understand what exists and what's missing
-2. List 5-10 concrete improvements ranked by user impact
-3. Implement the **top 2-3 improvements** — go for features or fixes users will actually notice
-4. Each improvement should be complete and working (no TODOs, no placeholders)
-5. Verify no TypeScript errors (do NOT run `npm run build`)
-6. Commit with a clear message describing ALL changes made
-7. Cross-cutting changes that touch frontend + backend are welcome here
+## Process
 
-## What "Meaningful" Means
+1. **Scan** — Read codebase files, CLAUDE.md, and roadmap.md. Understand what exists and what's missing.
+2. **Rank** — List the top 5-10 issues by user impact. Print the list.
+3. **Fix each issue using TDD:**
+   a. Write a failing test that demonstrates the missing or broken behavior
+   b. Implement the minimal fix to pass
+   c. Verify the fix works
+   d. Commit with a clear message: `Fix: [description of what was fixed]`
+4. **Cross-cutting changes welcome** — Frontend + backend changes in the same fix are expected here.
+5. **After all fixes:** Run `cd app && npm run build` to verify clean build.
 
-- Cleaning up a stale task in tasks.json is NOT meaningful. Building a missing feature from the roadmap IS.
-- Adding a comment is NOT meaningful. Fixing a broken user flow end-to-end IS.
-- Renaming a variable is NOT meaningful. Connecting two features that should work together IS.
-- Think: "Would a user say 'oh nice, that actually works now'?"
+## Requirements
 
-## CRITICAL CONSTRAINTS
+- **Minimum 5 completed fixes** before you stop
+- Each fix must be committed separately
+- Each commit message must describe what was fixed and why
+- No TODOs, no placeholders, no "will fix later"
+- If you break something while fixing, fix that too before moving on
 
-- **Do NOT run `npm run build`** — dev server hot-reloads automatically
-- **Do NOT restart the dev server**
-- **Do NOT run long-running commands** — keep all commands under 30 seconds
-- **Be ambitious** — make changes that matter
+## What Counts as a Fix
+
+- Making a broken user flow work end-to-end
+- Implementing a planned feature from the roadmap
+- Connecting two features that should work together
+- Adding user feedback for actions that currently fail silently
+- Fixing state synchronization between UI and server
+
+## What Does NOT Count
+
+- Cleaning up a stale task entry
+- Adding a comment or renaming a variable
+- Cosmetic changes that don't fix behavior
+- "Improvements" without a concrete user-facing outcome

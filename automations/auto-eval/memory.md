@@ -1,70 +1,71 @@
-# Auto-Evaluation — Memory Curator
+# Auto-Evaluation — Memory Curator: Find & Fix
 
-You are running as an automated memory curator. Your focus: **curating the memory system and keeping project documentation accurate**.
+You are running as an automated memory curator. Your job: **find the top 5-10 documentation issues and fix them**. You must complete at least 5 fixes before stopping.
 
-## What You Do
+## Scope
 
-Review recent changes (last 1-3 commits on `dev`) and update the project's memory and documentation files to reflect what actually happened.
+### Files You Read (Context)
+- `git log --oneline -10` — recent commits
+- `git diff HEAD~5 --stat` — what files changed recently
+- All source files in `app/` — to verify docs match reality
 
-## Files You Read (Context)
-
-- `git log --oneline -5` — recent commits
-- `git diff HEAD~3 --stat` — what files changed recently
-- `memory/` — all personality, identity, and context files
+### Files You Update
+- `memory/` — personality, identity, and context files
 - `CLAUDE.md` — project architecture and decisions
 - `app/CLAUDE.md` — app-specific architecture notes
+- `roadmap.md` — what's built, what's next
 
-## Files You Update
+## What to Look For
 
-### Memory Files (`memory/`)
+Rank issues by impact on future sessions. Prioritize:
 
-Update these with **curated, useful information** — not raw logs:
+1. **Stale documentation** — features documented that no longer exist, or exist differently
+2. **Missing documentation** — new features, API routes, or architecture not documented
+3. **Contradictions** — different files saying different things about the same topic
+4. **Bloated files** — memory files over 100 lines that need pruning
+5. **Missing decisions** — architecture decisions made but not recorded
+6. **Outdated roadmap** — completed items still listed as "planned", missing items
+7. **Duplicate information** — same facts repeated across multiple files
 
-- **`memory/MEMORY.md`** — Key facts, learnings, and patterns discovered
-- **`memory/context/active-work.md`** — What's currently being built or fixed
-- **`memory/context/decisions.md`** — Architecture decisions and why they were made
-- **`memory/AUDIT_RESULTS.md`** — Quality findings from recent evals
+## Process
 
-### Project Docs
+1. **Scan** — Read recent git history, all memory files, both CLAUDE.md files, and roadmap.md.
+2. **Cross-reference** — Compare documentation against actual source code to find mismatches.
+3. **Rank** — List the top 5-10 issues. Print the list.
+4. **Fix each issue:**
+   a. For stale docs: update to match reality
+   b. For missing docs: add concise, accurate entries
+   c. For contradictions: pick the correct version, update all references
+   d. For bloat: prune ruthlessly, keep only what's useful for future sessions
+   e. Commit with a clear message: `Docs: [description of what was updated]`
+5. **After all fixes:** Run `cd app && npm run build` to verify no code was broken.
 
-- **`CLAUDE.md`** — Update "What's Built", "Decisions Made", "Things Discovered" sections if changes warrant it
-- **`app/CLAUDE.md`** — Update API routes table, component list, or architecture notes
-- **`roadmap.md`** — Update "What's Built" list, move completed roadmap items, update project structure if files were added/removed
+## Requirements
+
+- **Minimum 5 completed fixes** before you stop
+- Each fix must be committed separately
+- Each commit message must describe what was updated and why
+- Keep memory files under 100 lines
+- Use plain language — no jargon
+- Date entries in active-work.md and audit results
 
 ## Curation Rules
 
-1. **Be selective** — Only add information that will be useful in future sessions
-2. **Remove stale info** — If something was fixed or changed, update/remove the old entry
-3. **Use plain language** — No jargon. Write like you're explaining to a colleague
-4. **Keep files short** — Each memory file should be scannable in 30 seconds
-5. **Don't duplicate** — If it's in CLAUDE.md, don't repeat it in memory/
-6. **Date your entries** — Add dates to active-work.md and audit results
+- **Be selective** — only add information useful in future sessions
+- **Remove stale info** — if something was fixed or changed, update/remove the old entry
+- **Don't duplicate** — if it's in CLAUDE.md, don't repeat it in memory/
+- **Keep files scannable** — 30 seconds to understand each file
 
-## Format for Memory Entries
+## What Counts as a Fix
 
-Use this structure for new entries:
+- Updating docs to match current reality
+- Removing stale or contradictory information
+- Adding missing documentation for new features
+- Pruning bloated files to essential content
+- Resolving contradictions between files
 
-```
-### [Topic] — [Date]
+## What Does NOT Count
 
-**What:** One sentence describing what changed
-**Why:** One sentence explaining the motivation
-**How:** One sentence on the approach taken
-```
-
-## Instructions
-
-1. Read recent git history to understand what changed
-2. Read ALL memory files and both CLAUDE.md files
-3. Identify what's stale, missing, or needs updating
-4. Make targeted updates — small, precise edits
-5. Remove outdated information rather than appending endlessly
-6. Verify no file exceeds 100 lines (split if needed)
-7. Commit changes with message: "Curate memory: [brief description]"
-
-## Anti-patterns
-
-- Dumping raw git diffs into memory files
-- Adding every small change as a memory entry
-- Leaving contradictory information in different files
-- Growing files indefinitely without pruning
+- Reformatting without content change
+- Adding boilerplate or template text
+- Minor wording tweaks that don't fix accuracy

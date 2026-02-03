@@ -1,47 +1,59 @@
-# Auto-Evaluation — Frontend Focus
+# Auto-Evaluation — Frontend: Find & Fix
 
-You are running as an automated evaluation. Your focus: **UI/UX, accessibility, and visual polish**.
+You are running as an automated evaluation. Your job: **find the top 5-10 frontend issues and fix them using TDD**. You must complete at least 5 fixes before stopping.
 
 ## Scope
 
-Examine files in:
 - `app/components/`
 - `app/app/page.tsx`
 - `app/app/globals.css`
 - `app/app/layout.tsx`
+- `app/app/api/` (if a frontend fix requires backend support)
+- `app/server.ts` (if a frontend fix requires a new API route or WS message)
 
 ## What to Look For
 
-- Alignment, spacing, responsiveness issues
-- Accessibility — contrast ratios (WCAG AA 4.5:1 text, 3:1 borders), focus states, keyboard navigation
-- Missing hover/active states on interactive elements
-- Component quality — reusability, prop design, unnecessary re-renders
-- Visual inconsistencies between components
-- Dark mode styling gaps (gray-950 background, white/[0.06] borders)
-- Layout problems at different viewport sizes
-- Missing loading states, empty states, error states
+Rank issues by user impact. Prioritize:
 
-## Instructions
+1. **Broken or missing user flows** — buttons that don't work, dead-end interactions
+2. **Accessibility failures** — contrast below WCAG AA (4.5:1 text, 3:1 borders), missing focus states, keyboard traps
+3. **Responsive layout bugs** — overflow, overlap, or unusable layouts at common breakpoints
+4. **Missing states** — no loading indicator, no empty state, no error feedback
+5. **Visual inconsistencies** — mismatched spacing, colors, or typography between components
+6. **Component quality** — unnecessary re-renders, missing memoization on expensive operations
+7. **Interactive state gaps** — missing hover/active/focus-visible on clickable elements
 
-1. Read ALL frontend files listed above — understand the full picture
-2. List 5-10 concrete improvements ranked by user impact
-3. Implement the **top 2-3 improvements** — go for meaningful changes that users will notice
-4. Each improvement should be complete (no TODOs, no placeholders)
-5. Verify no TypeScript errors (do NOT run `npm run build`)
-6. Commit with a clear message describing ALL changes made
-7. If a change touches multiple files, that's fine — do it right
+## Process
 
-## What "Meaningful" Means
+1. **Scan** — Read all frontend files. Understand the full picture.
+2. **Rank** — List the top 5-10 issues by user impact. Print the list.
+3. **Fix each issue using TDD:**
+   a. Write a failing test (unit test in `app/__tests__/` or check in code)
+   b. Implement the minimal fix to pass
+   c. Verify the fix works
+   d. Commit with a clear message: `Fix: [description of what was fixed]`
+4. **Cross-stack fixes welcome** — If a frontend fix needs a new API route, backend validation, or server change, implement that too. Don't leave the fix half-done.
+5. **After all fixes:** Run `cd app && npm run build` to verify clean build.
 
-- Adding a focus ring is NOT meaningful. Redesigning a broken layout IS.
-- Adding a single hover state is NOT meaningful. Fixing all missing interactive states across a component IS.
-- Tweaking one color is NOT meaningful. Fixing an accessibility issue that affects multiple elements IS.
-- Think: "Would a user testing the app notice this improvement?"
+## Requirements
 
-## CRITICAL CONSTRAINTS
+- **Minimum 5 completed fixes** before you stop
+- Each fix must be committed separately
+- Each commit message must describe what was fixed and why
+- No TODOs, no placeholders, no "will fix later"
+- If you break something while fixing, fix that too before moving on
 
-- **Do NOT run `npm run build`** — dev server hot-reloads automatically
-- **Do NOT restart the dev server**
-- **Do NOT modify `server.ts`** — this is a frontend-only eval
-- **Do NOT run long-running commands** — keep all commands under 30 seconds
-- **Be ambitious** — make changes that matter
+## What Counts as a Fix
+
+- Fixing a broken interaction end-to-end
+- Adding a missing loading/error/empty state
+- Fixing an accessibility violation (contrast, focus, keyboard nav)
+- Fixing a responsive layout bug
+- Adding missing interactive states to a component
+
+## What Does NOT Count
+
+- Adding a comment
+- Renaming a variable
+- Adding a single CSS class without behavior change
+- "Improvements" that don't fix a concrete issue

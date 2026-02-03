@@ -58,6 +58,7 @@
 - **Working directory persistence** — Selection saved to localStorage, restored on page reload, session-aware
 - **Automation execution** — Automation queue system for inter-process communication; POST /api/automations/{name} queues prompts, server executes on next WebSocket event; scheduled curl triggers work end-to-end
 - **Responsive task polling** — Task list polls every 1s for snappy feedback when auto-eval creates tasks
+- **Nightly eval schedule** — Configurable nightly cycle running all 4 eval types (frontend, backend, functionality, memory) sequentially with hourly intervals. Start time + interval configurable via UI. Runs independently from idle-timer auto-eval. Config persisted to `.nightly-eval-config`. All prompts rewritten to use TDD and fix minimum 5 issues per eval.
 
 ### What's Left
 - **Polish** — Design system refinements
@@ -204,12 +205,40 @@ cd app && npm run build  # Production build
 
 Always ensure the dev server is running on port 3000 so the user can test changes in the browser.
 
+### Proper Restart Sequence
+
+When restarting after code changes (especially `server.ts`):
+
+```bash
+# 1. Kill the existing process(es)
+pkill -f "npm run dev" || true
+pkill -f "tsx server.ts" || true
+sleep 1
+
+# 2. Verify port is free
+lsof -i :3000 && echo "Port still in use!" || echo "Port is free"
+
+# 3. Start with nohup (proper backgrounding)
+nohup npm run dev > /tmp/bridgette-dev.log 2>&1 &
+sleep 4
+
+# 4. Verify it's responding
+curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/
+# Expect: 200
+```
+
+### Checklist
+
 - **Before making UI changes:** Check `lsof -ti:3000` — start the server if it's not running
-- **After changes that affect server.ts or API routes:** Kill and restart (`kill -9 $(lsof -ti:3000) && cd app && npm run dev`)
-- **After build or any code changes:** Restart the dev server and verify with `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` (expect 200)
+- **After changes that affect server.ts or API routes:** Follow the restart sequence above (kill + wait + start + verify)
+- **After build or any code changes:** Restart dev server and verify with curl (expect 200)
 - **After build failures:** Fix the issue, restart the server, verify it returns 200
 - **Never leave the server down** after finishing work
-- **Verification sequence:** Build → Restart dev server → Confirm 200 → Then done
+- **Verification sequence:** Kill old → Verify port free → Start with nohup → Confirm 200 → Done
+
+### Why nohup?
+
+`npm run dev &` doesn't truly background the process. Use `nohup` to properly detach from the parent shell. The `&` alone can leave zombie/stale processes behind that block port 3000.
 
 ## Documentation
 

@@ -125,6 +125,119 @@ function saveEvalIndex(index: number): void {
 let currentEvalType: EvalType | null = null;
 
 // ============================================
+// NIGHTLY EVAL SCHEDULE
+// ============================================
+
+interface NightlyEvalConfig {
+  enabled: boolean;
+  startHour: number;    // 0-23, EST
+  startMinute: number;  // 0-59
+  intervalMinutes: number; // minutes between each eval in the cycle
+}
+
+const nightlyConfigFile = join(process.cwd(), "..", ".nightly-eval-config");
+const DEFAULT_NIGHTLY_CONFIG: NightlyEvalConfig = {
+  enabled: false,
+  startHour: 3,
+  startMinute: 0,
+  intervalMinutes: 60,
+};
+
+function loadNightlyConfig(): NightlyEvalConfig {
+  try {
+    const data = readFileSync(nightlyConfigFile, "utf-8");
+    const parsed = JSON.parse(data);
+    return {
+      enabled: typeof parsed.enabled === "boolean" ? parsed.enabled : false,
+      startHour: typeof parsed.startHour === "number" && parsed.startHour >= 0 && parsed.startHour <= 23 ? parsed.startHour : 3,
+      startMinute: typeof parsed.startMinute === "number" && parsed.startMinute >= 0 && parsed.startMinute <= 59 ? parsed.startMinute : 0,
+      intervalMinutes: typeof parsed.intervalMinutes === "number" && parsed.intervalMinutes >= 10 && parsed.intervalMinutes <= 240 ? parsed.intervalMinutes : 60,
+    };
+  } catch {
+    return { ...DEFAULT_NIGHTLY_CONFIG };
+  }
+}
+
+function saveNightlyConfig(config: NightlyEvalConfig): void {
+  try { writeFileSync(nightlyConfigFile, JSON.stringify(config, null, 2)); } catch {}
+}
+
+let nightlyConfig = loadNightlyConfig();
+let nightlyStartTimeout: NodeJS.Timeout | null = null;
+let nightlyEvalTimeouts: NodeJS.Timeout[] = [];
+let nightlyNextRun: number | null = null; // timestamp of next scheduled start
+
+function getNextNightlyStart(config: NightlyEvalConfig): Date {
+  const now = new Date();
+  // Build target time today in local time (server runs in EST)
+  const target = new Date(now);
+  target.setHours(config.startHour, config.startMinute, 0, 0);
+  // If target is in the past, schedule for tomorrow
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+  return target;
+}
+
+function scheduleNightlyEvals(): void {
+  cancelNightlyEvals();
+  if (!nightlyConfig.enabled) {
+    nightlyNextRun = null;
+    return;
+  }
+
+  const nextStart = getNextNightlyStart(nightlyConfig);
+  nightlyNextRun = nextStart.getTime();
+  const msUntilStart = nextStart.getTime() - Date.now();
+
+  console.log(`[nightly] Scheduled to start at ${nextStart.toLocaleString()} (in ${Math.round(msUntilStart / 60000)} min)`);
+
+  nightlyStartTimeout = setTimeout(() => {
+    console.log("[nightly] Starting nightly eval cycle");
+    runNightlyCycle();
+  }, msUntilStart);
+}
+
+function runNightlyCycle(): void {
+  const intervalMs = nightlyConfig.intervalMinutes * 60 * 1000;
+
+  for (let i = 0; i < EVAL_TYPES.length; i++) {
+    const delay = i * intervalMs;
+    const evalType = EVAL_TYPES[i];
+
+    const timeout = setTimeout(() => {
+      console.log(`[nightly] Triggering ${evalType} eval (${i + 1}/${EVAL_TYPES.length})`);
+      // Override the rotation index to run this specific eval type
+      saveEvalIndex(EVAL_TYPES.indexOf(evalType));
+      triggerServerAutoEvalFn?.();
+    }, delay);
+
+    nightlyEvalTimeouts.push(timeout);
+  }
+
+  // Schedule next night after the last eval would start
+  const lastEvalDelay = (EVAL_TYPES.length - 1) * intervalMs;
+  const rescheduleTimeout = setTimeout(() => {
+    scheduleNightlyEvals();
+  }, lastEvalDelay + 60000); // 1 min after last eval starts
+  nightlyEvalTimeouts.push(rescheduleTimeout);
+}
+
+function cancelNightlyEvals(): void {
+  if (nightlyStartTimeout) {
+    clearTimeout(nightlyStartTimeout);
+    nightlyStartTimeout = null;
+  }
+  for (const t of nightlyEvalTimeouts) {
+    clearTimeout(t);
+  }
+  nightlyEvalTimeouts = [];
+}
+
+// Forward reference to triggerServerAutoEval — set after app.prepare()
+let triggerServerAutoEvalFn: (() => void) | null = null;
+
+// ============================================
 // EVAL LOG — persists eval run history
 // ============================================
 
@@ -756,6 +869,9 @@ app.prepare().then(() => {
     });
   }
 
+  // Set forward reference for nightly scheduler
+  triggerServerAutoEvalFn = triggerServerAutoEval;
+
   const defaultCwd = process.env.HOME || "/Users/abereyes";
   const cwdFile = require("path").join(process.cwd(), "..", ".last-cwd");
 
@@ -812,7 +928,7 @@ app.prepare().then(() => {
     // Send initial state including branch and auto-eval
     const branch = getGitBranch(initialCwd);
     const evalRunning = !!serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null;
-    ws.send(JSON.stringify({ type: "state", cwd: initialCwd, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning, evalType: evalRunning ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining }));
+    ws.send(JSON.stringify({ type: "state", cwd: initialCwd, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning, evalType: evalRunning ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining, nightlySchedule: { ...nightlyConfig, nextRun: nightlyNextRun } }));
 
     // Process any pending automations queued by scheduled triggers (e.g., from curl POST)
     const pendingAuto = getNextAutomation();
@@ -901,7 +1017,7 @@ app.prepare().then(() => {
           chatSessions.set(ws, null);
           const branch = getGitBranch(target);
           const evalRunningNow = !!serverAutoEvalProcess && serverAutoEvalProcess.exitCode === null;
-          ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining }));
+          ws.send(JSON.stringify({ type: "state", cwd: target, branch, autoEval: serverAutoEvalEnabled, evalInterval: serverEvalInterval, evalRunning: evalRunningNow, evalType: evalRunningNow ? currentEvalType : null, evalTimerStart: serverIdleTimerStart, evalChaining, nightlySchedule: { ...nightlyConfig, nextRun: nightlyNextRun } }));
         } else if (parsed.type === "set_auto_eval") {
           serverAutoEvalEnabled = !!parsed.enabled;
           saveAutoEvalEnabled(serverAutoEvalEnabled);
@@ -943,6 +1059,16 @@ app.prepare().then(() => {
           if (prompt) {
             handleChatMessage(ws, prompt, chatSessions.get(ws) || null, undefined);
           }
+        } else if (parsed.type === "set_nightly_schedule") {
+          const update: Partial<NightlyEvalConfig> = {};
+          if (typeof parsed.enabled === "boolean") update.enabled = parsed.enabled;
+          if (typeof parsed.startHour === "number" && parsed.startHour >= 0 && parsed.startHour <= 23) update.startHour = parsed.startHour;
+          if (typeof parsed.startMinute === "number" && parsed.startMinute >= 0 && parsed.startMinute <= 59) update.startMinute = parsed.startMinute;
+          if (typeof parsed.intervalMinutes === "number" && parsed.intervalMinutes >= 10 && parsed.intervalMinutes <= 240) update.intervalMinutes = parsed.intervalMinutes;
+          nightlyConfig = { ...nightlyConfig, ...update };
+          saveNightlyConfig(nightlyConfig);
+          scheduleNightlyEvals();
+          broadcastToChat({ type: "nightly_schedule_state", nightlySchedule: { ...nightlyConfig, nextRun: nightlyNextRun } });
         } else if (parsed.type === "restart_server") {
           console.log("[server] Restart requested via WebSocket");
           // Notify all clients before shutting down
@@ -1283,6 +1409,11 @@ app.prepare().then(() => {
       resetServerIdleTimer();
       console.log("> Auto-eval enabled — idle timer started (15 min)");
     }
+    // Start nightly scheduler if enabled
+    if (nightlyConfig.enabled) {
+      scheduleNightlyEvals();
+      console.log(`> Nightly evals enabled — next run at ${new Date(nightlyNextRun!).toLocaleString()}`);
+    }
   });
 
   // ============================================
@@ -1304,6 +1435,9 @@ app.prepare().then(() => {
       clearTimeout(evalRetryTimer);
       evalRetryTimer = null;
     }
+
+    // Cancel nightly schedule
+    cancelNightlyEvals();
 
     // Cancel all chat retry timers
     for (const [, retryState] of chatRetryStates) {
