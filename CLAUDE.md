@@ -26,6 +26,77 @@ Each directory has its own `CLAUDE.md` with relevant context. **Load only what y
 
 ---
 
+## Branch Workflow
+
+This project uses a **three-branch workflow** for stable releases:
+
+| Branch | Purpose | Merge Target |
+|--------|---------|--------------|
+| `dev` | All new coding happens here | → `testing` |
+| `testing` | Verify changes, run objective tests | → `production` |
+| `production` | Stable releases, deployed code | — |
+
+### Development Flow
+
+1. **Code on dev:** Make all changes and commits on `dev` branch
+2. **Test on testing:** Merge `dev` → `testing` and run test suite (see below)
+3. **Release to production:** After tests pass, merge `testing` → `production`
+4. **Sync dev:** After production merge, sync `dev` with `production`
+
+### Testing Checklist
+
+Before merging `testing` → `production`, verify:
+
+```bash
+# Unit tests (no server needed)
+cd app && npm run test:run
+
+# Integration tests (start server in separate terminal)
+cd app && npm run dev  # Terminal 1
+cd app && npm run test:run  # Terminal 2
+
+# Critical system tests (see TEST_RESULTS.md for full checklist)
+# - Launchd service loads without auto-starting
+# - Manual start/stop works
+# - Server restart and cleanup verified
+```
+
+### Commands
+
+**Work on a feature:**
+```bash
+git checkout dev
+# make changes
+git add .
+git commit -m "feat: description"
+git push origin dev
+```
+
+**Test a feature:**
+```bash
+git checkout testing
+git merge dev
+# run test suite
+```
+
+**Release to production (after tests pass):**
+```bash
+git checkout production
+git merge testing --no-ff
+git push origin production
+
+# Sync dev with production
+git checkout dev
+git merge production --ff-only
+git push origin dev
+```
+
+### Test Results
+
+See [`TEST_RESULTS.md`](TEST_RESULTS.md) for the most recent verification results.
+
+---
+
 ## Documentation Maintenance
 
 **Keep documentation current.** When you learn something new about a subsystem, **update that subsystem's CLAUDE.md immediately**.
