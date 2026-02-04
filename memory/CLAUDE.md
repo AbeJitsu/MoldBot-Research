@@ -43,3 +43,23 @@ New files:
 - The original AGENTS.md had extensive OpenClaw-specific content (heartbeat polling, group chat etiquette, cron vs heartbeat decisions) that doesn't apply to the native dashboard. Simplified to core principles.
 - HEARTBEAT.md was empty — added example tasks for the dashboard monitoring use case.
 - The prompts/ directory in ~/claude-memory was empty (with an empty refined/ subdir) — not migrated.
+
+## Integration with Nightly Eval System
+
+The memory eval (4th of 4 nightly evals) updates documentation:
+
+- Runs daily at ~6 AM EST (default: starts 3 AM with 60-minute intervals between 4 sequential evals)
+- Configurable start time and interval via Automations UI; separate from idle-timer auto-eval system
+- Updates `CLAUDE.md`, memory files, and `roadmap.md` based on recent code changes
+- Runs 4th (after frontend → backend → functionality); part of nightly eval rotation
+- Reads `.nightly-eval-fixes.md` at startup to avoid duplication, then appends fixes
+- Appends fixes to the log for tracking
+
+### Things to Know
+
+1. **Memory eval updates are automatic** — No user input needed, happens during nightly cycle
+2. **Can conflict with manual edits** — If you update CLAUDE.md overnight, memory eval might conflict
+3. **Updates are committed** — Each fix gets its own commit with message starting "Docs:"
+4. **No notification** — Check Status tab (or `/api/eval-logs` endpoint) to see updates
+
+For the full nightly eval system, see root `CLAUDE.md`.
